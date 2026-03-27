@@ -121,86 +121,97 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Tier Shields ── */
-.tier-shield {
+/* ── Tier buttons (with real tier images) ── */
+.tier-btn {
   align-items: center;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(200,155,60,.25);
-  border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  border: 1.5px solid rgba(200,155,60,.2);
+  border-radius: 8px;
   color: rgba(224,224,224,.55);
   cursor: pointer;
   display: flex;
-  font-size: 0.82rem;
+  flex-direction: column;
+  font-size: 0.72rem;
   font-weight: 700;
-  height: 36px;
+  height: 52px;
   justify-content: center;
-  min-width: 36px;
-  padding: 0 10px;
+  min-width: 52px;
+  padding: 4px 6px;
   transition: all .18s;
-  position: relative;
-  clip-path: polygon(50% 0%, 100% 18%, 100% 75%, 50% 100%, 0% 75%, 0% 18%);
+  gap: 2px;
 }
-.tier-shield:not([class*="tier-shield--"]) {
-  clip-path: none;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  min-width: 42px;
+.tier-btn__img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  opacity: 0.65;
+  transition: opacity .18s;
 }
-.tier-shield:hover {
-  border-color: rgba(240,192,64,.6);
-  color: #f0c040;
+.tier-btn__label {
+  font-size: 0.68rem;
+  color: rgba(224,224,224,.55);
 }
-.tier-shield.active {
+.tier-btn:hover {
+  border-color: rgba(240,192,64,.5);
+  background: rgba(255,255,255,.08);
+}
+.tier-btn:hover .tier-btn__img { opacity: 0.9; }
+.tier-btn.active {
+  background: rgba(240,192,64,.1);
   border-color: #f0c040;
-  color: #f0c040;
+  box-shadow: 0 0 10px rgba(240,192,64,.2);
 }
+.tier-btn.active .tier-btn__img { opacity: 1; }
 
-/* Tier-specific shield colors */
-.tier-shield--1       { background: linear-gradient(160deg, #1a2a1a, #0d1a0d); }
-.tier-shield--1.active { background: linear-gradient(160deg, #1e4d1e, #0d300d); border-color:#4caf50; color:#81C784; }
-.tier-shield--2       { background: linear-gradient(160deg, #1a221e, #0d1a14); }
-.tier-shield--2.active { background: linear-gradient(160deg, #1e4d36, #0d3020); border-color:#26a69a; color:#80CBC4; }
-.tier-shield--3       { background: linear-gradient(160deg, #1a1a2a, #0d0d1a); }
-.tier-shield--3.active { background: linear-gradient(160deg, #1e2b4d, #0d1930); border-color:#1e88e5; color:#90CAF9; }
-.tier-shield--4       { background: linear-gradient(160deg, #2a1a2a, #1a0d1a); }
-.tier-shield--4.active { background: linear-gradient(160deg, #4a1e6b, #30103e); border-color:#ab47bc; color:#CE93D8; }
-.tier-shield--5       { background: linear-gradient(160deg, #2a1a10, #1a0d06); }
-.tier-shield--5.active { background: linear-gradient(160deg, #6b3a1e, #3e1e0d); border-color:#ef6c00; color:#FFCC80; }
-.tier-shield--6       { background: linear-gradient(160deg, #2a1010, #1a0606); }
-.tier-shield--6.active { background: linear-gradient(160deg, #6b1e1e, #3e0d0d); border-color:#e53935; color:#EF9A9A; }
-
-/* ── Tribe circles ── */
+/* ── Tribe circles (with real tribe images) ── */
 .tribe-circle {
   align-items: center;
-  background: rgba(var(--tc, #333), 0.25);
-  border: 1.5px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  border: 1.5px solid rgba(255,255,255,.1);
   border-radius: 999px;
-  color: rgba(224,224,224,.6);
+  color: rgba(224,224,224,.55);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  font-size: 0.6rem;
-  gap: 1px;
-  height: 52px;
+  gap: 2px;
+  height: 62px;
   justify-content: center;
-  padding: 0 8px;
-  min-width: 52px;
+  min-width: 58px;
+  padding: 4px 8px;
   transition: all .18s;
   position: relative;
 }
-.tribe-circle__emoji { font-size: 1.2rem; line-height: 1; }
-.tribe-circle__name  { font-size: 0.58rem; font-weight: 500; line-height: 1; text-align: center; white-space: nowrap; }
+.tribe-circle__img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 50%;
+  opacity: 0.65;
+  transition: opacity .18s;
+}
+.tribe-circle__name {
+  font-size: 0.58rem;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  color: rgba(224,224,224,.55);
+  transition: color .18s;
+}
 .tribe-circle:hover {
-  border-color: rgba(255,255,255,.4);
-  color: #fff;
+  border-color: rgba(255,255,255,.35);
+  background: rgba(255,255,255,.08);
   box-shadow: 0 0 10px var(--tg, rgba(200,200,200,.3));
 }
+.tribe-circle:hover .tribe-circle__img  { opacity: 0.9; }
+.tribe-circle:hover .tribe-circle__name { color: #fff; }
 .tribe-circle.active {
-  background: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.1);
   border-color: var(--tg, #ccc);
-  color: #fff;
   box-shadow: 0 0 14px var(--tg, rgba(200,200,200,.4));
 }
+.tribe-circle.active .tribe-circle__img  { opacity: 1; }
+.tribe-circle.active .tribe-circle__name { color: #fff; }
 
 /* ── Mechanics dropdown ── */
 .mechanics-select {
@@ -370,17 +381,23 @@ body {
 /* Tribe badge inside card info */
 .tribe-badge {
   align-items: center;
-  background: color-mix(in srgb, var(--tribe-color, #333) 30%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tribe-glow, #666) 50%, transparent);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
   border-radius: 20px;
   color: rgba(224,224,224,.85);
   display: flex;
   font-size: 0.65rem;
   font-weight: 500;
   gap: 4px;
-  padding: 2px 8px 2px 5px;
+  padding: 2px 8px 2px 3px;
 }
-.tribe-badge__emoji { font-size: 0.8rem; }
+.tribe-badge__icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
 /* Stat badge */
 .stat-badge {

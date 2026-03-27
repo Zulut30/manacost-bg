@@ -41,19 +41,19 @@ const CATEGORIES: { key: CategoryKey; label: string; icon: string }[] = [
 ];
 
 // Correct tribe map based on Blizzard metadata (gameMode 5 = BG)
-const TRIBE_INFO: Record<number, { name: string; emoji: string; color: string; glow: string }> = {
-  11: { name: 'Нежить',      emoji: '💀', color: '#3d4f5c', glow: '#78909C' },
-  14: { name: 'Мурлок',      emoji: '🐟', color: '#0d47a1', glow: '#42A5F5' },
-  15: { name: 'Демон',       emoji: '😈', color: '#4a148c', glow: '#CE93D8' },
-  17: { name: 'Механизм',    emoji: '⚙️', color: '#263238', glow: '#B0BEC5' },
-  18: { name: 'Элементаль',  emoji: '🔥', color: '#bf360c', glow: '#FFAB40' },
-  20: { name: 'Зверь',       emoji: '🐾', color: '#1b5e20', glow: '#81C784' },
-  23: { name: 'Пират',       emoji: '🏴‍☠️', color: '#0d1f6e', glow: '#7986CB' },
-  24: { name: 'Дракон',      emoji: '🐉', color: '#7f0000', glow: '#EF9A9A' },
-  26: { name: 'Все расы',    emoji: '⭐', color: '#4a3300', glow: '#FFD54F' },
-  43: { name: 'Свинобраз',   emoji: '🐗', color: '#3e2723', glow: '#A1887F' },
-  92: { name: 'Нага',        emoji: '🐍', color: '#00352a', glow: '#4DB6AC' },
-  93: { name: 'Древний бог', emoji: '👁️', color: '#1a1030', glow: '#9C27B0' },
+const TRIBE_INFO: Record<number, { name: string; icon: string; color: string; glow: string }> = {
+  11: { name: 'Нежить',      icon: '/assets/undead.webp',    color: '#3d4f5c', glow: '#78909C' },
+  14: { name: 'Мурлок',      icon: '/assets/murlocs.webp',   color: '#0d47a1', glow: '#42A5F5' },
+  15: { name: 'Демон',       icon: '/assets/demons.webp',    color: '#4a148c', glow: '#CE93D8' },
+  17: { name: 'Механизм',    icon: '/assets/mechs.webp',     color: '#263238', glow: '#B0BEC5' },
+  18: { name: 'Элементаль',  icon: '/assets/elementals.webp',color: '#bf360c', glow: '#FFAB40' },
+  20: { name: 'Зверь',       icon: '/assets/beasts.webp',    color: '#1b5e20', glow: '#81C784' },
+  23: { name: 'Пират',       icon: '/assets/pirates.webp',   color: '#0d1f6e', glow: '#7986CB' },
+  24: { name: 'Дракон',      icon: '/assets/dragons.webp',   color: '#7f0000', glow: '#EF9A9A' },
+  26: { name: 'Все расы',    icon: '/assets/all.webp',       color: '#4a3300', glow: '#FFD54F' },
+  43: { name: 'Свинобраз',   icon: '/assets/quilboar.webp',  color: '#3e2723', glow: '#A1887F' },
+  92: { name: 'Нага',        icon: '/assets/nagas.webp',     color: '#00352a', glow: '#4DB6AC' },
+  93: { name: 'Древний бог', icon: '/assets/all.webp',       color: '#1a1030', glow: '#9C27B0' },
 };
 
 // Tier data for display
@@ -115,7 +115,8 @@ function MinionCard({ card, imgErrors, onImgError }: {
               className="tribe-badge"
               style={{ '--tribe-color': tribe.color, '--tribe-glow': tribe.glow } as React.CSSProperties}
             >
-              <span className="tribe-badge__emoji">{tribe.emoji}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={tribe.icon} alt={tribe.name} className="tribe-badge__icon" />
               {tribe.name}
             </span>
           )}
@@ -294,19 +295,21 @@ export default function HomePage() {
           {/* Tier shields */}
           <div className="filter-section">
             <button
-              className={`tier-shield${filterTier === null ? ' active' : ''}`}
+              className={`tier-btn${filterTier === null ? ' active' : ''}`}
               onClick={() => setFilterTier(null)}
+              title="Все тиры"
             >
-              <span>Все</span>
+              <span className="tier-btn__label">Все</span>
             </button>
             {TIER_TIERS.map((t) => (
               <button
                 key={t}
-                className={`tier-shield tier-shield--${t}${filterTier === t ? ' active' : ''}`}
+                className={`tier-btn${filterTier === t ? ' active' : ''}`}
                 onClick={() => setFilterTier(filterTier === t ? null : t)}
                 title={`Тир ${t}`}
               >
-                <span>{t}</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/assets/tier${t}.png`} alt={`Тир ${t}`} className="tier-btn__img" />
               </button>
             ))}
           </div>
@@ -324,14 +327,12 @@ export default function HomePage() {
                     <button
                       key={id}
                       className={`tribe-circle${isActive ? ' active' : ''}`}
-                      style={{
-                        '--tc': info.color,
-                        '--tg': info.glow,
-                      } as React.CSSProperties}
+                      style={{ '--tc': info.color, '--tg': info.glow } as React.CSSProperties}
                       onClick={() => setFilterTribe(isActive ? null : id)}
                       title={info.name}
                     >
-                      <span className="tribe-circle__emoji">{info.emoji}</span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={info.icon} alt={info.name} className="tribe-circle__img" />
                       <span className="tribe-circle__name">{info.name}</span>
                     </button>
                   );
