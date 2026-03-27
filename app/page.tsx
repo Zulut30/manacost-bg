@@ -24,24 +24,21 @@ interface BgCard {
   solosOnly: boolean;
 }
 
-/** Малые хрономальные — cardTypeId 40, ключевые — 999 (поменять при необходимости) */
-const CHRONO_TYPE_MINOR = 40;
-const CHRONO_TYPE_MAJOR = 999;
+/** Малые хрономальные — уровень таверны 3, ключевые — уровень таверны 5 */
+const CHRONO_TIER_MINOR = 3;
+const CHRONO_TIER_MAJOR = 5;
 
 type ChronoKind = 'minor' | 'major';
 
 function chronoSortKey(c: BgCard): number {
   const m = c.manaCost;
   if (m != null && m > 0) return m;
-  const t = c.tier;
-  if (t != null && t > 0) return t;
   return 999;
 }
 
-/** Ключ группы: -1 = нет ни стоимости, ни тира (в конец) */
+/** Группировка секций по стоимости хронума; -1 = без стоимости (в конец) */
 function chronoGroupKey(c: BgCard): number {
   if (c.manaCost != null && c.manaCost > 0) return c.manaCost;
-  if (c.tier != null && c.tier > 0) return c.tier;
   return -1;
 }
 
@@ -49,7 +46,7 @@ type CategoryKey =
   | 'all' | 'minion' | 'hero' | 'spell'
   | 'trinket' | 'anomaly' | 'quest' | 'chrono' | 'other';
 
-// ── Static data ───────────────────────────────────────────────────────────────
+// ── Static data (подразделы внутри вкладки «Библиотека») ───────────────────────
 const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'all',     label: 'Все'          },
   { key: 'minion',  label: 'Существа'     },
@@ -61,6 +58,34 @@ const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'chrono',  label: 'Хрономальные' },
   { key: 'other',   label: 'Прочее'       },
 ];
+
+type SilkBgPayload = {
+  comps?: { comps?: unknown[]; total?: number; _error?: number };
+  firestone?: {
+    cards?: Array<{
+      card_name?: string;
+      tavern_tier?: number | null;
+      avg_placement?: number | null;
+      total_played?: number;
+    }>;
+    total?: number;
+    _error?: number;
+  };
+  fetchedAt?: string;
+  error?: string;
+};
+
+function extractCompsList(data: SilkBgPayload['comps']): Array<{
+  name?: string;
+  tier?: string;
+  difficulty?: string;
+  summary?: string;
+}> {
+  if (!data || typeof data !== 'object') return [];
+  const o = data as { comps?: unknown[] };
+  if (Array.isArray(o.comps)) return o.comps as { name?: string; tier?: string; difficulty?: string; summary?: string }[];
+  return [];
+}
 
 const TRIBE_INFO: Record<number, { name: string; icon: string; glow: string }> = {
   11: { name: 'Нежить',      icon: '/assets/undead.webp',     glow: '#78909C' },
@@ -171,6 +196,7 @@ export default function HomePage() {
   const [filterKeyword, setFilterKeyword] = useState<number | null>(null);
   const [chronoKind, setChronoKind] = useState<ChronoKind>('minor');
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
+  const [silkBg, setSilkBg] = useState<SilkBgPayload | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -184,6 +210,13 @@ export default function HomePage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/silk-bg')
+      .then((r) => r.json())
+      .then((d) => setSilkBg(d))
+      .catch(() => setSilkBg({ error: 'silk' }));
   }, []);
 
   const handleImgError = (id: number) =>
@@ -212,10 +245,10 @@ export default function HomePage() {
   const SORT_BY_TIER: CategoryKey[] = ['minion', 'spell'];
 
   const filtered = useMemo(() => {
-    const wantChronoType = chronoKind === 'minor' ? CHRONO_TYPE_MINOR : CHRONO_TYPE_MAJOR;
+    const wantChronoTier = chronoKind === 'minor' ? CHRONO_TIER_MINOR : CHRONO_TIER_MAJOR;
     const result = cards.filter((c) => {
       if (activeCategory !== 'all' && c.category !== activeCategory) return false;
-      if (activeCategory === 'chrono' && c.cardTypeId !== wantChronoType) return false;
+      if (activeCategory === 'chrono' && c.tier !== wantChronoTier) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterTier !== null && c.tier !== filterTier) return false;
       if (filterTribe !== null && c.minionTypeId !== filterTribe) return false;
@@ -311,24 +344,33 @@ export default function HomePage() {
       </header>
 
       {/* ════════════════════════════════
-          CATEGORY TABS
+          LIBRARY (root) + подразделы
       ════════════════════════════════ */}
-      <nav className="cat-nav">
-        <div className="cat-nav__inner">
+      <nav className="cat-nav cat-nav--root" aria-label="Библиотека">
+        <div className="cat-nav__inner cat-nav__inner--root">
+          <div className="cat-tab cat-tab--root active">
+            Библиотека
+            <span className="cat-tab__count">{cards.length}</span>
+          </div>
+        </div>
+      </nav>
+      <nav className="lib-subnav" aria-label="Разделы библиотеки">
+        <div className="lib-subnav__inner">
           {CATEGORIES.map(({ key, label }) => {
             const count = key === 'all' ? cards.length : (countByCategory[key] ?? 0);
             if (key !== 'all' && count === 0) return null;
             return (
               <button
                 key={key}
-                className={`cat-tab${activeCategory === key ? ' active' : ''}`}
+                type="button"
+                className={`lib-subnav__tab${activeCategory === key ? ' active' : ''}`}
                 onClick={() => {
                   setActiveCategory(key);
                   resetFilters();
                 }}
               >
                 {label}
-                <span className="cat-tab__count">{count}</span>
+                <span className="lib-subnav__count">{count}</span>
               </button>
             );
           })}
@@ -453,6 +495,98 @@ export default function HomePage() {
           <button className="reset-btn" onClick={resetFilters}>✕ Сбросить</button>
         )}
       </div>
+
+      {/* ════════════════════════════════
+          META (Silk API — HSReplay / Firestone)
+      ════════════════════════════════ */}
+      <section className="meta-dock" aria-label="Мета Battlegrounds">
+        <div className="meta-dock__inner">
+          <h2 className="meta-dock__title">Мета и тир-листы</h2>
+          <p className="meta-dock__source">
+            Данные:{' '}
+            <a href="https://api-data-silk.vercel.app/#overview" target="_blank" rel="noreferrer">
+              api-data-silk.vercel.app
+            </a>
+            {silkBg?.fetchedAt && (
+              <span className="meta-dock__time"> · обновлено {new Date(silkBg.fetchedAt).toLocaleString('ru-RU')}</span>
+            )}
+          </p>
+          {silkBg?.error && <p className="meta-dock__hint">Не удалось загрузить мета-данные.</p>}
+          {!silkBg && <p className="meta-dock__hint">Загрузка статистики…</p>}
+          {silkBg && !silkBg.error && (
+            <div className="meta-dock__grid">
+              <div className="meta-block">
+                <h3 className="meta-block__title">Стратегии BG (HSReplay)</h3>
+                {silkBg.comps?._error != null ? (
+                  <p className="meta-dock__hint">Код {silkBg.comps._error}</p>
+                ) : (
+                  <div className="meta-table-wrap">
+                    <table className="meta-table">
+                      <thead>
+                        <tr>
+                          <th>Стратегия</th>
+                          <th>Тир</th>
+                          <th>Сложность</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extractCompsList(silkBg.comps).slice(0, 30).map((row, i) => (
+                          <tr key={i}>
+                            <td>{row.name}</td>
+                            <td>{row.tier}</td>
+                            <td>{row.difficulty}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div className="meta-block">
+                <h3 className="meta-block__title">Карты BG (Firestone)</h3>
+                {silkBg.firestone?._error != null ? (
+                  <p className="meta-dock__hint">Код {silkBg.firestone._error}</p>
+                ) : (
+                  <div className="meta-table-wrap">
+                    <table className="meta-table">
+                      <thead>
+                        <tr>
+                          <th>Карта</th>
+                          <th>Тир таверны</th>
+                          <th>Ср. место</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(silkBg.firestone?.cards ?? [])
+                          .filter(
+                            (c): c is NonNullable<typeof c> & { card_name: string } =>
+                              Boolean(c?.card_name),
+                          )
+                          .sort(
+                            (a, b) =>
+                              (a.avg_placement ?? 99) - (b.avg_placement ?? 99),
+                          )
+                          .slice(0, 25)
+                          .map((row, i) => (
+                            <tr key={i}>
+                              <td>{row.card_name}</td>
+                              <td>{row.tavern_tier ?? '—'}</td>
+                              <td>
+                                {row.avg_placement != null
+                                  ? row.avg_placement.toFixed(2)
+                                  : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* ════════════════════════════════
           CONTENT

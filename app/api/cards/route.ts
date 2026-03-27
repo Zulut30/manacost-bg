@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchSupplementalBattlegroundsCards } from '@/lib/supplementalBgCards';
 
 const TOKEN_URL = 'https://oauth.battle.net/token';
 const CARDS_URL = 'https://us.api.blizzard.com/hearthstone/cards';
@@ -130,7 +131,13 @@ export async function GET() {
   try {
     const token = await getAccessToken();
     const cards = await fetchAllCards(token);
-    return NextResponse.json({ cards, total: cards.length });
+    const supplemental = await fetchSupplementalBattlegroundsCards();
+    const byId = new Map(cards.map((c) => [c.id, c]));
+    for (const s of supplemental) {
+      if (!byId.has(s.id)) byId.set(s.id, s as (typeof cards)[number]);
+    }
+    const merged = Array.from(byId.values());
+    return NextResponse.json({ cards: merged, total: merged.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
