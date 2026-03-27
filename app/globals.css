@@ -14,7 +14,7 @@ body {
 /* ── Header ── */
 .header {
   background: linear-gradient(135deg, #111827 0%, #0f3460 100%);
-  padding: 18px 28px;
+  padding: 16px 24px;
   border-bottom: 2px solid #c89b3c;
   display: flex;
   align-items: center;
@@ -24,7 +24,7 @@ body {
 }
 
 .header h1 {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #f0c040;
   text-shadow: 0 2px 10px rgba(240, 192, 64, 0.4);
@@ -34,7 +34,6 @@ body {
 .controls {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
   align-items: center;
 }
 
@@ -45,26 +44,12 @@ body {
   color: #e0e0e0;
   font-size: 0.9rem;
   padding: 7px 13px;
-  width: 210px;
+  width: 220px;
   outline: none;
   transition: border-color 0.2s;
 }
 .search-input::placeholder { color: rgba(224, 224, 224, 0.35); }
 .search-input:focus { border-color: #f0c040; }
-
-.filter-select {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(200, 155, 60, 0.4);
-  border-radius: 8px;
-  color: #e0e0e0;
-  font-size: 0.9rem;
-  padding: 7px 13px;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-.filter-select:focus { border-color: #f0c040; }
-.filter-select option { background: #111827; }
 
 /* ── Category Tabs ── */
 .tabs-bar {
@@ -116,41 +101,40 @@ body {
   border-bottom: 1px solid rgba(200, 155, 60, 0.1);
   color: rgba(224, 224, 224, 0.5);
   font-size: 0.82rem;
-  padding: 8px 28px;
+  padding: 7px 24px;
 }
 
 /* ── Main grid ── */
 .main {
-  padding: 20px 24px;
+  padding: 18px 20px;
 }
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
 }
 
-/* ── Card item ── */
+/* ── Card item — image only ── */
 .card-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  transition: transform 0.18s, box-shadow 0.18s;
 }
 .card-item:hover {
-  border-color: rgba(200, 155, 60, 0.55);
-  box-shadow: 0 6px 20px rgba(200, 155, 60, 0.15);
-  transform: translateY(-3px);
+  box-shadow: 0 6px 22px rgba(200, 155, 60, 0.25);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .card-image-wrapper {
-  aspect-ratio: 1 / 1.38;
+  /* BG card renders are approx 1:1.39 */
+  aspect-ratio: 1 / 1.39;
   background: #0a1020;
   overflow: hidden;
   position: relative;
   width: 100%;
+  border-radius: 8px;
 }
 .card-image-wrapper img {
   display: block;
@@ -161,80 +145,28 @@ body {
 .card-placeholder {
   align-items: center;
   background: linear-gradient(135deg, #0d1b2a, #111827);
-  color: rgba(200, 155, 60, 0.25);
+  color: rgba(200, 155, 60, 0.18);
   display: flex;
-  font-size: 2.6rem;
+  font-size: 3rem;
   height: 100%;
   justify-content: center;
   width: 100%;
 }
 
-/* Tier badge overlaid on image */
-.tier-overlay {
-  background: rgba(0,0,0,0.72);
-  border: 1px solid rgba(200,155,60,0.5);
-  border-radius: 6px;
-  color: #f0c040;
-  font-size: 0.72rem;
-  font-weight: 700;
-  left: 6px;
-  padding: 2px 6px;
-  position: absolute;
-  top: 6px;
-}
-
+/* Duo overlay — only badge kept */
 .duos-overlay {
-  background: rgba(0,0,0,0.72);
-  border: 1px solid rgba(100,149,237,0.5);
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(111, 168, 255, 0.6);
   border-radius: 6px;
   color: #6fa8ff;
   font-size: 0.7rem;
-  padding: 2px 5px;
-  position: absolute;
-  right: 6px;
-  top: 6px;
-}
-
-.card-info {
-  padding: 8px 10px 10px;
-}
-.card-name {
-  color: #f0c040;
-  font-size: 0.82rem;
   font-weight: 600;
-  line-height: 1.3;
-  margin-bottom: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.badge {
-  border-radius: 9px;
-  font-size: 0.68rem;
-  font-weight: 500;
   padding: 2px 7px;
-  white-space: nowrap;
-}
-.badge-tribe {
-  background: rgba(144, 238, 144, 0.1);
-  border: 1px solid rgba(144, 238, 144, 0.25);
-  color: #90ee90;
-}
-.badge-stat {
-  background: rgba(100, 149, 237, 0.1);
-  border: 1px solid rgba(100, 149, 237, 0.25);
-  color: #8ab4f8;
-}
-.badge-armor {
-  background: rgba(255, 160, 80, 0.1);
-  border: 1px solid rgba(255, 160, 80, 0.25);
-  color: #ffb060;
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 /* ── Loading / error / empty ── */
@@ -277,8 +209,11 @@ body {
 }
 
 @media (max-width: 600px) {
-  .header { padding: 14px 16px; }
-  .main { padding: 14px 12px; }
-  .cards-grid { gap: 10px; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); }
-  .tab { font-size: 0.82rem; padding: 10px 12px; }
+  .header { padding: 12px 14px; }
+  .main { padding: 12px 10px; }
+  .cards-grid {
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  .tab { font-size: 0.8rem; padding: 10px 10px; }
 }

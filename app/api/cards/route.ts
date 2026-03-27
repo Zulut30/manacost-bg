@@ -69,9 +69,10 @@ function getCategory(card: RawCard): string {
   const t = card.cardTypeId;
   if (t === 4) return 'minion';
   if (t === 43) return 'anomaly';
-  if (t === 42 || t === 44) return 'spell';
+  if (t === 42) return 'spell';
+  if (t === 44) return 'trinket';
   if (t === 5) return 'quest';
-  if (t === 40 || t === 999) return 'special';
+  if (t === 40 || t === 999) return 'chrono';
   return 'other';
 }
 

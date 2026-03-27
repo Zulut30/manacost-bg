@@ -21,25 +21,28 @@ interface BgCard {
   solosOnly: boolean;
 }
 
-type CategoryKey = 'all' | 'minion' | 'hero' | 'spell' | 'anomaly' | 'quest' | 'special' | 'other';
+type CategoryKey =
+  | 'all'
+  | 'minion'
+  | 'hero'
+  | 'spell'
+  | 'trinket'
+  | 'anomaly'
+  | 'quest'
+  | 'chrono'
+  | 'other';
 
 const CATEGORIES: { key: CategoryKey; label: string; icon: string }[] = [
-  { key: 'all',     label: 'Все',         icon: '📚' },
-  { key: 'minion',  label: 'Существа',    icon: '⚔️' },
-  { key: 'hero',    label: 'Герои',       icon: '👑' },
-  { key: 'spell',   label: 'Заклинания',  icon: '✨' },
-  { key: 'anomaly', label: 'Аномалии',    icon: '🌀' },
-  { key: 'quest',   label: 'Задачи',      icon: '📜' },
-  { key: 'special', label: 'Особые',      icon: '🔮' },
-  { key: 'other',   label: 'Прочее',      icon: '❓' },
+  { key: 'all',     label: 'Все',              icon: '📚' },
+  { key: 'minion',  label: 'Существа',          icon: '⚔️' },
+  { key: 'hero',    label: 'Герои',             icon: '👑' },
+  { key: 'spell',   label: 'Заклинания',        icon: '✨' },
+  { key: 'trinket', label: 'Аксессуары',        icon: '💎' },
+  { key: 'anomaly', label: 'Аномалии',          icon: '🌀' },
+  { key: 'quest',   label: 'Задачи',            icon: '📜' },
+  { key: 'chrono',  label: 'Хрономальные',      icon: '⏳' },
+  { key: 'other',   label: 'Прочее',            icon: '❓' },
 ];
-
-const TRIBE_MAP: Record<number, string> = {
-  14: 'Мурлок', 15: 'Демон', 17: 'Механизм', 18: 'Зверь',
-  20: 'Пират',  24: 'Дракон', 26: 'Элементаль', 43: 'Квилборн',
-  92: 'Нага',   93: 'Ундерол', 97: 'Спелункер',  11: 'Нежить',
-  23: 'Другие',
-};
 
 export default function HomePage() {
   const [cards, setCards] = useState<BgCard[]>([]);
@@ -47,8 +50,6 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
   const [search, setSearch] = useState('');
-  const [filterTier, setFilterTier] = useState('all');
-  const [filterTribe, setFilterTribe] = useState('all');
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -64,44 +65,21 @@ export default function HomePage() {
 
   const countByCategory = useMemo(() => {
     const m: Record<string, number> = { all: cards.length };
-    for (const c of cards) {
-      m[c.category] = (m[c.category] ?? 0) + 1;
-    }
+    for (const c of cards) m[c.category] = (m[c.category] ?? 0) + 1;
     return m;
   }, [cards]);
-
-  const tiers = useMemo(() => {
-    if (activeCategory !== 'all' && activeCategory !== 'minion') return [];
-    const t = new Set<number>();
-    cards.filter((c) => c.category === 'minion').forEach((c) => { if (c.tier) t.add(c.tier); });
-    return [...t].sort((a, b) => a - b);
-  }, [cards, activeCategory]);
-
-  const tribes = useMemo(() => {
-    if (activeCategory !== 'all' && activeCategory !== 'minion') return [];
-    const t = new Set<number>();
-    cards.filter((c) => c.category === 'minion').forEach((c) => {
-      if (c.minionTypeId) t.add(c.minionTypeId);
-    });
-    return [...t].sort((a, b) => a - b);
-  }, [cards, activeCategory]);
 
   const filtered = useMemo(() => {
     return cards.filter((c) => {
       if (activeCategory !== 'all' && c.category !== activeCategory) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterTier !== 'all' && String(c.tier) !== filterTier) return false;
-      if (filterTribe !== 'all' && String(c.minionTypeId) !== filterTribe) return false;
       return true;
     });
-  }, [cards, activeCategory, search, filterTier, filterTribe]);
+  }, [cards, activeCategory, search]);
 
   function handleImgError(id: number) {
     setImgErrors((prev) => new Set(prev).add(id));
   }
-
-  const showTierFilter = activeCategory === 'all' || activeCategory === 'minion';
-  const showTribeFilter = activeCategory === 'all' || activeCategory === 'minion';
 
   return (
     <>
@@ -114,39 +92,21 @@ export default function HomePage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          {showTierFilter && tiers.length > 0 && (
-            <select className="filter-select" value={filterTier} onChange={(e) => setFilterTier(e.target.value)}>
-              <option value="all">Все тиры</option>
-              {tiers.map((t) => <option key={t} value={String(t)}>Тир {t}</option>)}
-            </select>
-          )}
-          {showTribeFilter && tribes.length > 0 && (
-            <select className="filter-select" value={filterTribe} onChange={(e) => setFilterTribe(e.target.value)}>
-              <option value="all">Все расы</option>
-              {tribes.map((t) => (
-                <option key={t} value={String(t)}>{TRIBE_MAP[t] ?? `Раса ${t}`}</option>
-              ))}
-            </select>
-          )}
         </div>
       </header>
 
       <nav className="tabs-bar">
         {CATEGORIES.map(({ key, label, icon }) => {
-          const count = countByCategory[key] ?? 0;
+          const count = key === 'all' ? cards.length : (countByCategory[key] ?? 0);
           if (key !== 'all' && count === 0) return null;
           return (
             <button
               key={key}
               className={`tab${activeCategory === key ? ' active' : ''}`}
-              onClick={() => {
-                setActiveCategory(key);
-                setFilterTier('all');
-                setFilterTribe('all');
-              }}
+              onClick={() => setActiveCategory(key)}
             >
               {icon} {label}
-              <span className="tab-count">{key === 'all' ? cards.length : count}</span>
+              <span className="tab-count">{count}</span>
             </button>
           );
         })}
@@ -181,9 +141,9 @@ export default function HomePage() {
             {filtered.map((card) => (
               <div key={card.id} className="card-item" title={card.name}>
                 <div className="card-image-wrapper">
-                  {card.tier && <span className="tier-overlay">Тир {card.tier}</span>}
-                  {card.duosOnly && <span className="duos-overlay">Дуо</span>}
-
+                  {card.duosOnly && (
+                    <span className="duos-overlay">Дуо</span>
+                  )}
                   {imgErrors.has(card.id) || !card.image ? (
                     <div className="card-placeholder">🃏</div>
                   ) : (
@@ -197,23 +157,6 @@ export default function HomePage() {
                       unoptimized
                     />
                   )}
-                </div>
-
-                <div className="card-info">
-                  <div className="card-name">{card.name}</div>
-                  <div className="card-meta">
-                    {card.minionTypeId && (
-                      <span className="badge badge-tribe">
-                        {TRIBE_MAP[card.minionTypeId] ?? `Раса ${card.minionTypeId}`}
-                      </span>
-                    )}
-                    {card.attack !== undefined && card.health !== undefined && (
-                      <span className="badge badge-stat">{card.attack}/{card.health}</span>
-                    )}
-                    {card.armor !== undefined && card.armor > 0 && (
-                      <span className="badge badge-armor">🛡 {card.armor}</span>
-                    )}
-                  </div>
                 </div>
               </div>
             ))}
