@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Hearthstone Battlegrounds — Карты',
+  title: {
+    default: 'Hearthstone Battlegrounds — Карты',
+    template: '%s · BG Library',
+  },
   description: 'Библиотека карт Hearthstone Battlegrounds',
 };
 
