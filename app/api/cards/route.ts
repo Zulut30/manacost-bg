@@ -30,6 +30,7 @@ interface RawCard {
   text?: string;
   cardTypeId?: number;
   minionTypeId?: number;
+  keywordIds?: number[];
   attack?: number;
   health?: number;
   armor?: number;
@@ -110,6 +111,7 @@ async function fetchAllCards(token: string) {
     text: c.text ?? '',
     cardTypeId: c.cardTypeId,
     minionTypeId: c.minionTypeId,
+    keywordIds: c.keywordIds ?? [],
     attack: c.attack,
     health: c.health,
     armor: c.armor,
