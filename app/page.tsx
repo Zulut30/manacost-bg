@@ -69,12 +69,25 @@ export default function HomePage() {
     return m;
   }, [cards]);
 
+  const SORT_BY_TIER: CategoryKey[] = ['minion', 'spell', 'chrono'];
+
   const filtered = useMemo(() => {
-    return cards.filter((c) => {
+    const result = cards.filter((c) => {
       if (activeCategory !== 'all' && c.category !== activeCategory) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
+
+    if (SORT_BY_TIER.includes(activeCategory)) {
+      result.sort((a, b) => {
+        const ta = a.tier ?? 999;
+        const tb = b.tier ?? 999;
+        return ta - tb;
+      });
+    }
+
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards, activeCategory, search]);
 
   function handleImgError(id: number) {
