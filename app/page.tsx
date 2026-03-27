@@ -68,10 +68,7 @@ function CardImage({ card, imgErrors, onImgError, size = '200px' }: {
   const hasImg = card.image && !imgErrors.has(card.id);
   return (
     <div className="card-img-wrap" title={card.name}>
-      {card.duosOnly && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src="/assets/duo.webp" alt="Дуо" className="card-duo-badge" />
-      )}
+      {card.duosOnly && <span className="card-duo-badge">Дуо</span>}
       {hasImg ? (
         <Image
           src={card.image}
@@ -96,8 +93,8 @@ function TierDivider({ tier }: { tier: number }) {
       <div className="tier-divider__line" />
       <div className="tier-divider__center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/assets/tier${tier}.png`} alt={`Тир ${tier}`} className="tier-divider__img" />
-        <span className="tier-divider__label">Тир {tier}</span>
+        <img src={`/assets/tier${tier}.png`} alt={`Уровень Таверны ${tier}`} className="tier-divider__img" />
+        <span className="tier-divider__label">Уровень Таверны {tier}</span>
       </div>
       <div className="tier-divider__line" />
     </div>
@@ -256,7 +253,7 @@ export default function HomePage() {
 
             {/* Tier row */}
             <div className="fp-row">
-              <span className="fp-label">Тир</span>
+              <span className="fp-label">Уровень Таверны</span>
               <div className="fp-chips">
                 <button
                   className={`tier-chip${filterTier === null ? ' active' : ''}`}
@@ -269,7 +266,7 @@ export default function HomePage() {
                     key={t}
                     className={`tier-chip tier-chip--${t}${filterTier === t ? ' active' : ''}`}
                     onClick={() => setFilterTier(filterTier === t ? null : t)}
-                    title={`Тир ${t}`}
+                    title={`Уровень Таверны ${t}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={`/assets/tier${t}.png`} alt={`${t}`} className="tier-chip__img" />

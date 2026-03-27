@@ -407,7 +407,7 @@ body {
 /* ── Single card (pure image) ── */
 .card-img-wrap {
   aspect-ratio: 1 / 1.39;
-  background: var(--bg-card);
+  background: transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
   overflow: hidden;
@@ -439,15 +439,22 @@ body {
   width: 100%;
 }
 
-/* Duo badge (small icon top-right) */
+/* Duo badge (small text label top-right) */
 .card-duo-badge {
-  height: 26px;
-  object-fit: contain;
+  align-items: center;
+  background: rgba(100, 140, 255, 0.85);
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.6rem;
+  font-weight: 700;
+  justify-content: center;
+  letter-spacing: .04em;
+  padding: 2px 5px;
   pointer-events: none;
   position: absolute;
   right: 6px;
   top: 6px;
-  width: 26px;
   z-index: 3;
   filter: drop-shadow(0 1px 4px rgba(0,0,0,.7));
 }
