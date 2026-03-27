@@ -1,3 +1,19 @@
+import { FIRESTONE_EN_TO_RU } from './firestoneHeroNamesRu';
+
+/** Нормализация id/slug из Firestone (регистр, подчёркивания) */
+export function normalizeHeroIdKey(id: string): string {
+  return id.trim().toLowerCase().replace(/_/g, '-');
+}
+
+function ruFromEnglishHeroName(en: string | undefined | null): string | undefined {
+  if (!en?.trim()) return undefined;
+  const t = en.trim().toLowerCase();
+  if (FIRESTONE_EN_TO_RU[t]) return FIRESTONE_EN_TO_RU[t];
+  const noApos = t.replace(/[''´`]/g, '');
+  if (FIRESTONE_EN_TO_RU[noApos]) return FIRESTONE_EN_TO_RU[noApos];
+  return undefined;
+}
+
 /** Сопоставление hero_card_id (slug) → русское имя из библиотеки карт */
 export function buildHeroRuLookup(
   cards: Array<{ slug: string; name: string; category: string }>,
@@ -6,6 +22,7 @@ export function buildHeroRuLookup(
   for (const c of cards) {
     if (c.category !== 'hero' || !c.slug) continue;
     m.set(c.slug, c.name);
+    m.set(normalizeHeroIdKey(c.slug), c.name);
   }
   return m;
 }
@@ -14,8 +31,14 @@ export function resolveHeroRuName(
   row: { hero_card_id?: string; hero_name?: string },
   lookup: Map<string, string>,
 ): string {
-  const id = row.hero_card_id;
-  if (id && lookup.has(id)) return lookup.get(id)!;
+  const id = row.hero_card_id?.trim();
+  if (id) {
+    if (lookup.has(id)) return lookup.get(id)!;
+    const norm = normalizeHeroIdKey(id);
+    if (lookup.has(norm)) return lookup.get(norm)!;
+  }
+  const fromMap = ruFromEnglishHeroName(row.hero_name);
+  if (fromMap) return fromMap;
   return row.hero_name ?? '—';
 }
 
@@ -54,7 +77,9 @@ export function buildHeroExtrasLookup(
   const m = new Map<string, { armor?: number; duosOnly: boolean }>();
   for (const c of cards) {
     if (c.category !== 'hero' || !c.slug) continue;
-    m.set(c.slug, { armor: c.armor, duosOnly: c.duosOnly });
+    const ex = { armor: c.armor, duosOnly: c.duosOnly };
+    m.set(c.slug, ex);
+    m.set(normalizeHeroIdKey(c.slug), ex);
   }
   return m;
 }

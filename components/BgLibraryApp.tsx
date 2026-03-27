@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   buildHeroExtrasLookup,
   buildHeroRuLookup,
   groupRowsByTier,
+  normalizeHeroIdKey,
   resolveHeroRuName,
   tierFromPlacement,
   translateFirestonePeriod,
@@ -111,25 +111,25 @@ const TIER_TIERS = [1, 2, 3, 4, 5, 6];
 const BG_KEYWORD_IDS = [8, 12, 1, 3, 21, 198, 360, 234, 196, 66, 261, 6];
 
 // ── Card component (pure image) ───────────────────────────────────────────────
-function CardImage({ card, imgErrors, onImgError, size = '200px' }: {
+function CardImage({ card, imgErrors, onImgError }: {
   card: BgCard;
   imgErrors: Set<number>;
   onImgError: (id: number) => void;
-  size?: string;
 }) {
   const hasImg = card.image && !imgErrors.has(card.id);
   return (
     <div className="card-img-wrap" title={card.name}>
       {card.duosOnly && <span className="card-duo-badge">Дуо</span>}
       {hasImg ? (
-        <Image
+        /* native img: Blizzard CDN без ограничений next/image remotePatterns */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           src={card.image}
           alt={card.name}
-          fill
-          sizes={size}
-          style={{ objectFit: 'cover' }}
+          className="card-img-wrap__fill"
           onError={() => onImgError(card.id)}
-          unoptimized
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="card-placeholder">🃏</div>
@@ -180,38 +180,33 @@ function MetaHeroTile({
   const ruName = resolveHeroRuName(row, heroRuLookup);
   const card = (() => {
     if (!slug) return undefined;
-    const bySlug = heroCardBySlug.get(slug);
+    const bySlug =
+      heroCardBySlug.get(slug) ?? heroCardBySlug.get(normalizeHeroIdKey(slug));
     if (bySlug) return bySlug;
     const t = slug.trim();
     if (/^\d+$/.test(t)) return heroCardById.get(Number(t));
     return undefined;
   })();
-  const extras = slug ? heroExtrasLookup.get(slug) : undefined;
-  const armor = card?.armor ?? extras?.armor;
+  const extras = slug
+    ? (heroExtrasLookup.get(slug) ?? heroExtrasLookup.get(normalizeHeroIdKey(slug)))
+    : undefined;
+  const displayName = card?.name?.trim() ? card.name : ruName;
 
   return (
     <article
       className="tl-hero-tile"
-      title={ruName}
+      title={displayName}
     >
       <div className="tl-hero-tile__cell">
         <div className="tl-hero-library-card">
           {card ? (
-            <CardImage card={card} imgErrors={imgErrors} onImgError={onImgError} size="148px" />
+            <CardImage card={card} imgErrors={imgErrors} onImgError={onImgError} />
           ) : (
-            <div className="card-img-wrap" title={ruName}>
+            <div className="card-img-wrap" title={displayName}>
               {extras?.duosOnly && <span className="card-duo-badge">Дуо</span>}
               <div className="card-placeholder">🃏</div>
             </div>
           )}
-        </div>
-        <div className="tl-hero-armor" title="Броня героя">
-          <span className="tl-hero-armor__icon" aria-hidden>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 2.18l6 2.25v5.15c0 4.25-2.82 8.17-6 9.16-3.18-.99-6-4.91-6-9.16V6.43l6-2.25z" />
-            </svg>
-          </span>
-          <span className="tl-hero-armor__val">{armor != null ? armor : '—'}</span>
         </div>
         {showMetaStats && (
           <div className="tl-hero-stats" aria-label="Статистика героя">
@@ -238,7 +233,7 @@ function MetaHeroTile({
           </div>
         )}
       </div>
-      <p className="tl-hero-tile__name">{ruName}</p>
+      <p className="tl-hero-tile__name">{displayName}</p>
     </article>
   );
 }
@@ -360,7 +355,9 @@ export default function BgLibraryApp() {
   const heroCardBySlug = useMemo(() => {
     const m = new Map<string, BgCard>();
     for (const c of cards) {
-      if (c.category === 'hero' && c.slug) m.set(c.slug, c);
+      if (c.category !== 'hero' || !c.slug) continue;
+      m.set(c.slug, c);
+      m.set(normalizeHeroIdKey(c.slug), c);
     }
     return m;
   }, [cards]);

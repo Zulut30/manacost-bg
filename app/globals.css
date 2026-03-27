@@ -731,39 +731,6 @@ body {
   width: 100%;
 }
 
-.tl-hero-armor {
-  align-items: center;
-  background: linear-gradient(180deg, #5c6a75 0%, #3d474f 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px 2px 2px 6px;
-  color: #eceff1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 26px;
-  padding: 3px 2px 4px;
-  pointer-events: none;
-  position: absolute;
-  right: -2px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 3;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
-}
-.tl-hero-armor__icon {
-  color: rgba(255, 255, 255, 0.55);
-  display: flex;
-  justify-content: center;
-  line-height: 1;
-}
-.tl-hero-armor__val {
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  line-height: 1;
-  text-align: center;
-}
-
 .tl-hero-stats {
   background: linear-gradient(180deg, rgba(8, 12, 22, 0.92) 0%, rgba(6, 10, 18, 0.97) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -915,10 +882,13 @@ body {
   transform: translateY(-5px) scale(1.03);
   z-index: 2;
 }
+.card-img-wrap__fill,
 .card-img-wrap img {
   display: block;
   height: 100%;
+  inset: 0;
   object-fit: cover;
+  position: absolute;
   width: 100%;
 }
 
