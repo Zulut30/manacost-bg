@@ -5,11 +5,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  buildHeroExtrasLookup,
   buildHeroRuLookup,
+  groupRowsByTier,
   heroPortraitUrl,
   resolveHeroRuName,
   tierFromPlacement,
   translateFirestonePeriod,
+  TIER_ORDER,
+  type TierLetter,
 } from '@/lib/heroMetaDisplay';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -150,6 +154,88 @@ function TierDivider({ tier }: { tier: number }) {
   );
 }
 
+function tierHeadingClass(t: TierLetter): string {
+  return `tl-tier-heading tl-tier-heading--${t.toLowerCase()}`;
+}
+
+function MetaHeroTile({
+  row,
+  heroRuLookup,
+  heroExtrasLookup,
+  showMetaStats,
+}: {
+  row: FirestoneHeroRow;
+  heroRuLookup: Map<string, string>;
+  heroExtrasLookup: Map<string, { armor?: number; duosOnly: boolean }>;
+  showMetaStats: boolean;
+}) {
+  const slug = row.hero_card_id;
+  const ruName = resolveHeroRuName(row, heroRuLookup);
+  const extras = slug ? heroExtrasLookup.get(slug) : undefined;
+  const portrait = heroPortraitUrl(slug);
+  const armor = extras?.armor;
+
+  return (
+    <article
+      className="tl-hero-tile"
+      title={ruName}
+    >
+      <div className="tl-hero-tile__cell">
+        {extras?.duosOnly && (
+          <span className="tl-hero-tile__duo">Дуо</span>
+        )}
+        <div className="tl-hero-frame">
+          {portrait ? (
+            <Image
+              src={portrait}
+              alt={ruName}
+              fill
+              sizes="120px"
+              className="tl-hero-frame__img"
+              unoptimized
+            />
+          ) : (
+            <div className="tl-hero-frame__fallback" aria-hidden>?</div>
+          )}
+        </div>
+        <div className="tl-hero-armor" title="Броня героя">
+          <span className="tl-hero-armor__icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 2.18l6 2.25v5.15c0 4.25-2.82 8.17-6 9.16-3.18-.99-6-4.91-6-9.16V6.43l6-2.25z" />
+            </svg>
+          </span>
+          <span className="tl-hero-armor__val">{armor != null ? armor : '—'}</span>
+        </div>
+        {showMetaStats && (
+          <div className="tl-hero-stats" aria-label="Статистика героя">
+            <div className="tl-hero-stats__row">
+              <span className="tl-hero-stats__k">Место</span>
+              <span className="tl-hero-stats__v">
+                {row.avg_placement != null ? row.avg_placement.toFixed(2) : '—'}
+              </span>
+            </div>
+            <div className="tl-hero-stats__row">
+              <span className="tl-hero-stats__k">Пик %</span>
+              <span className="tl-hero-stats__v">
+                {typeof row.pick_rate === 'number' ? `${row.pick_rate.toFixed(1)}%` : '—'}
+              </span>
+            </div>
+            <div className="tl-hero-stats__row">
+              <span className="tl-hero-stats__k">Игр</span>
+              <span className="tl-hero-stats__v">
+                {row.games_played != null
+                  ? row.games_played.toLocaleString('ru-RU')
+                  : '—'}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+      <p className="tl-hero-tile__name">{ruName}</p>
+    </article>
+  );
+}
+
 function ChronumDivider({ cost }: { cost: number }) {
   if (cost === -1) {
     return (
@@ -203,6 +289,7 @@ export default function BgLibraryApp() {
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
   const [firestoneHeroes, setFirestoneHeroes] = useState<FirestoneHeroesPayload | null>(null);
   const [metaLoading, setMetaLoading] = useState(false);
+  const [showMetaStats, setShowMetaStats] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -262,6 +349,7 @@ export default function BgLibraryApp() {
   }, [cards]);
 
   const heroRuLookup = useMemo(() => buildHeroRuLookup(cards), [cards]);
+  const heroExtrasLookup = useMemo(() => buildHeroExtrasLookup(cards), [cards]);
 
   const sortedFirestoneHeroes = useMemo((): FirestoneHeroRow[] => {
     if (!firestoneHeroes?.heroes?.length) return [];
@@ -270,13 +358,13 @@ export default function BgLibraryApp() {
     );
   }, [firestoneHeroes]);
 
-  const maxPickRate = useMemo(() => {
-    let m = 1;
-    for (const h of sortedFirestoneHeroes) {
-      if (typeof h.pick_rate === 'number') m = Math.max(m, h.pick_rate);
-    }
-    return m;
-  }, [sortedFirestoneHeroes]);
+  const heroesByTier = useMemo(
+    () =>
+      groupRowsByTier(sortedFirestoneHeroes, (r) =>
+        tierFromPlacement(r.avg_placement ?? null),
+      ),
+    [sortedFirestoneHeroes],
+  );
 
   const SORT_BY_TIER: CategoryKey[] = ['minion', 'spell'];
 
@@ -586,94 +674,65 @@ export default function BgLibraryApp() {
             )}
             {!metaLoading && firestoneHeroes?.ok === true && (
               <>
-                <div className="meta-page__toolbar">
+                <div className="meta-page__toolbar meta-page__toolbar--tier">
                   <p className="meta-page__updated">
                     {firestoneHeroes.fetchedAt
                       ? `Обновлено: ${new Date(firestoneHeroes.fetchedAt).toLocaleString('ru-RU')}`
                       : null}
                     {firestoneHeroes.total != null ? ` · Героев в списке: ${firestoneHeroes.total}` : ''}
                   </p>
-                  <div className="meta-legend" aria-hidden>
-                    <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--s" /> S</span>
-                    <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--a" /> A</span>
-                    <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--b" /> B</span>
-                    <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--c" /> C</span>
-                    <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--d" /> D</span>
-                    <span className="meta-legend__hint">по среднему месту</span>
+                  <div className="meta-page__toolbar-actions">
+                    <label className="meta-stats-toggle">
+                      <input
+                        type="checkbox"
+                        checked={showMetaStats}
+                        onChange={(e) => setShowMetaStats(e.target.checked)}
+                      />
+                      <span>Показать статистику</span>
+                    </label>
+                    <div className="meta-legend" aria-hidden>
+                      <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--s" /> S</span>
+                      <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--a" /> A</span>
+                      <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--b" /> B</span>
+                      <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--c" /> C</span>
+                      <span className="meta-legend__item"><i className="meta-legend__dot meta-legend__dot--d" /> D</span>
+                      <span className="meta-legend__hint">по среднему месту</span>
+                    </div>
                   </div>
                 </div>
-                <ul className="hero-meta-list">
-                  {sortedFirestoneHeroes.map((row, i) => {
-                    const ruName = resolveHeroRuName(row, heroRuLookup);
-                    const tier = tierFromPlacement(row.avg_placement ?? null);
-                    const portrait = heroPortraitUrl(row.hero_card_id);
-                    const pick = typeof row.pick_rate === 'number' ? row.pick_rate : 0;
-                    const pickBar = maxPickRate > 0 ? Math.min(100, (pick / maxPickRate) * 100) : 0;
+                <div className="tl-tier-list">
+                  {TIER_ORDER.map((tierKey) => {
+                    const tierHeroes = heroesByTier.get(tierKey) ?? [];
+                    if (tierHeroes.length === 0) return null;
                     return (
-                      <li key={row.hero_card_id ?? `h-${i}`} className={`hero-meta-card hero-meta-card--tier-${tier.toLowerCase()}`}>
-                        <div className="hero-meta-card__rank" title="Место в рейтинге">
-                          <span className="hero-meta-card__rank-num">{i + 1}</span>
-                        </div>
-                        <div className="hero-meta-card__portrait-wrap">
-                          {portrait ? (
-                            <Image
-                              src={portrait}
-                              alt={ruName}
-                              width={76}
-                              height={76}
-                              className="hero-meta-card__portrait-img"
-                              unoptimized
+                      <section
+                        key={tierKey}
+                        className="tl-tier-block"
+                        aria-labelledby={`tier-heading-${tierKey}`}
+                      >
+                        <h2 id={`tier-heading-${tierKey}`} className={tierHeadingClass(tierKey)}>
+                          Тир {tierKey}
+                        </h2>
+                        <div className="tl-hero-grid">
+                          {tierHeroes.map((row, hi) => (
+                            <MetaHeroTile
+                              key={row.hero_card_id ?? `${tierKey}-${hi}`}
+                              row={row}
+                              heroRuLookup={heroRuLookup}
+                              heroExtrasLookup={heroExtrasLookup}
+                              showMetaStats={showMetaStats}
                             />
-                          ) : (
-                            <div className="hero-meta-card__portrait-fallback" aria-hidden>?</div>
-                          )}
-                          <span className={`hero-meta-card__tier-badge hero-meta-card__tier-badge--${tier.toLowerCase()}`}>
-                            {tier}
-                          </span>
+                          ))}
                         </div>
-                        <div className="hero-meta-card__main">
-                          <h2 className="hero-meta-card__name">{ruName}</h2>
-                          <div className="hero-meta-card__stats">
-                            <div className="hero-meta-stat">
-                              <span className="hero-meta-stat__label">Среднее место</span>
-                              <span className="hero-meta-stat__value">
-                                {row.avg_placement != null ? row.avg_placement.toFixed(2) : '—'}
-                              </span>
-                            </div>
-                            <div className="hero-meta-stat">
-                              <span className="hero-meta-stat__label">Пикрейт</span>
-                              <span className="hero-meta-stat__value">
-                                {typeof row.pick_rate === 'number' ? `${row.pick_rate.toFixed(1)}%` : '—'}
-                              </span>
-                            </div>
-                            <div className="hero-meta-stat">
-                              <span className="hero-meta-stat__label">Игр</span>
-                              <span className="hero-meta-stat__value">
-                                {row.games_played != null
-                                  ? row.games_played.toLocaleString('ru-RU')
-                                  : '—'}
-                              </span>
-                            </div>
-                            <div className="hero-meta-stat">
-                              <span className="hero-meta-stat__label">Период</span>
-                              <span className="hero-meta-stat__value hero-meta-stat__value--small">
-                                {translateFirestonePeriod(row.time_period)}
-                              </span>
-                            </div>
-                          </div>
-                          {typeof row.pick_rate === 'number' && (
-                            <div className="hero-meta-card__bar" aria-hidden>
-                              <div
-                                className="hero-meta-card__bar-fill"
-                                style={{ width: `${pickBar}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </li>
+                      </section>
                     );
                   })}
-                </ul>
+                </div>
+                {sortedFirestoneHeroes[0] && (
+                  <p className="meta-page__period-hint">
+                    Период данных: {translateFirestonePeriod(sortedFirestoneHeroes[0].time_period)}
+                  </p>
+                )}
                 <details className="meta-page__details">
                   <summary className="meta-page__details-sum">Подключение API</summary>
                   <p className="meta-page__details-text">
