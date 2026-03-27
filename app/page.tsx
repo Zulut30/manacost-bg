@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface BgCard {
   id: number;
   slug: string;
@@ -28,125 +28,56 @@ type CategoryKey =
   | 'trinket' | 'anomaly' | 'quest' | 'chrono' | 'other';
 
 // ── Static data ───────────────────────────────────────────────────────────────
-const CATEGORIES: { key: CategoryKey; label: string; icon: string }[] = [
-  { key: 'all',     label: 'Все',          icon: '📚' },
-  { key: 'minion',  label: 'Существа',     icon: '⚔️' },
-  { key: 'hero',    label: 'Герои',        icon: '👑' },
-  { key: 'spell',   label: 'Заклинания',   icon: '✨' },
-  { key: 'trinket', label: 'Аксессуары',   icon: '💎' },
-  { key: 'anomaly', label: 'Аномалии',     icon: '🌀' },
-  { key: 'quest',   label: 'Задачи',       icon: '📜' },
-  { key: 'chrono',  label: 'Хрономальные', icon: '⏳' },
-  { key: 'other',   label: 'Прочее',       icon: '❓' },
+const CATEGORIES: { key: CategoryKey; label: string }[] = [
+  { key: 'all',     label: 'Все'          },
+  { key: 'minion',  label: 'Существа'     },
+  { key: 'hero',    label: 'Герои'        },
+  { key: 'spell',   label: 'Заклинания'   },
+  { key: 'trinket', label: 'Аксессуары'   },
+  { key: 'anomaly', label: 'Аномалии'     },
+  { key: 'quest',   label: 'Задачи'       },
+  { key: 'chrono',  label: 'Хрономальные' },
+  { key: 'other',   label: 'Прочее'       },
 ];
 
-// Correct tribe map based on Blizzard metadata (gameMode 5 = BG)
-const TRIBE_INFO: Record<number, { name: string; icon: string; color: string; glow: string }> = {
-  11: { name: 'Нежить',      icon: '/assets/undead.webp',    color: '#3d4f5c', glow: '#78909C' },
-  14: { name: 'Мурлок',      icon: '/assets/murlocs.webp',   color: '#0d47a1', glow: '#42A5F5' },
-  15: { name: 'Демон',       icon: '/assets/demons.webp',    color: '#4a148c', glow: '#CE93D8' },
-  17: { name: 'Механизм',    icon: '/assets/mechs.webp',     color: '#263238', glow: '#B0BEC5' },
-  18: { name: 'Элементаль',  icon: '/assets/elementals.webp',color: '#bf360c', glow: '#FFAB40' },
-  20: { name: 'Зверь',       icon: '/assets/beasts.webp',    color: '#1b5e20', glow: '#81C784' },
-  23: { name: 'Пират',       icon: '/assets/pirates.webp',   color: '#0d1f6e', glow: '#7986CB' },
-  24: { name: 'Дракон',      icon: '/assets/dragons.webp',   color: '#7f0000', glow: '#EF9A9A' },
-  26: { name: 'Все расы',    icon: '/assets/all.webp',       color: '#4a3300', glow: '#FFD54F' },
-  43: { name: 'Свинобраз',   icon: '/assets/quilboar.webp',  color: '#3e2723', glow: '#A1887F' },
-  92: { name: 'Нага',        icon: '/assets/nagas.webp',     color: '#00352a', glow: '#4DB6AC' },
-  93: { name: 'Древний бог', icon: '/assets/all.webp',       color: '#1a1030', glow: '#9C27B0' },
+const TRIBE_INFO: Record<number, { name: string; icon: string; glow: string }> = {
+  11: { name: 'Нежить',      icon: '/assets/undead.webp',     glow: '#78909C' },
+  14: { name: 'Мурлок',      icon: '/assets/murlocs.webp',    glow: '#42A5F5' },
+  15: { name: 'Демон',       icon: '/assets/demons.webp',     glow: '#CE93D8' },
+  17: { name: 'Механизм',    icon: '/assets/mechs.webp',      glow: '#B0BEC5' },
+  18: { name: 'Элементаль',  icon: '/assets/elementals.webp', glow: '#FFAB40' },
+  20: { name: 'Зверь',       icon: '/assets/beasts.webp',     glow: '#81C784' },
+  23: { name: 'Пират',       icon: '/assets/pirates.webp',    glow: '#7986CB' },
+  24: { name: 'Дракон',      icon: '/assets/dragons.webp',    glow: '#EF9A9A' },
+  26: { name: 'Все расы',    icon: '/assets/all.webp',        glow: '#FFD54F' },
+  43: { name: 'Свинобраз',   icon: '/assets/quilboar.webp',   glow: '#A1887F' },
+  92: { name: 'Нага',        icon: '/assets/nagas.webp',      glow: '#4DB6AC' },
+  93: { name: 'Древний бог', icon: '/assets/all.webp',        glow: '#9C27B0' },
 };
 
-// Tier data for display
 const TIER_TIERS = [1, 2, 3, 4, 5, 6];
+const BG_KEYWORD_IDS = [8, 12, 1, 3, 21, 198, 360, 234, 196, 66, 261, 6];
 
-// BG-relevant keyword IDs (from data analysis - most common in BG cards)
-const BG_KEYWORD_IDS = [8, 12, 1, 3, 21, 198, 360, 234, 196, 66, 11, 261, 6, 78];
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-function stripHtml(html: string) {
-  return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-function TierLabel({ tier }: { tier: number }) {
-  return (
-    <div className="tier-section-header">
-      <div className="tier-shield-badge" data-tier={tier}>{tier}</div>
-      <span>Тир {tier}</span>
-      <div className="tier-section-line" />
-    </div>
-  );
-}
-
-function MinionCard({ card, imgErrors, onImgError }: {
+// ── Card component (pure image) ───────────────────────────────────────────────
+function CardImage({ card, imgErrors, onImgError, size = '200px' }: {
   card: BgCard;
   imgErrors: Set<number>;
   onImgError: (id: number) => void;
+  size?: string;
 }) {
-  const tribe = card.minionTypeId ? TRIBE_INFO[card.minionTypeId] : null;
-  const hasImage = card.image && !imgErrors.has(card.id);
-
+  const hasImg = card.image && !imgErrors.has(card.id);
   return (
-    <div className="minion-card" title={card.name}>
-      <div className="minion-card__img">
-        {card.duosOnly && <span className="duo-badge">Дуо</span>}
-        {hasImage ? (
-          <Image
-            src={card.image}
-            alt={card.name}
-            fill
-            sizes="220px"
-            style={{ objectFit: 'cover' }}
-            onError={() => onImgError(card.id)}
-            unoptimized
-          />
-        ) : (
-          <div className="card-placeholder">🃏</div>
-        )}
-      </div>
-      <div className="minion-card__info">
-        <div className="minion-card__name">{card.name}</div>
-        {card.text && (
-          <div className="minion-card__text">{stripHtml(card.text)}</div>
-        )}
-        <div className="minion-card__meta">
-          {tribe && (
-            <span
-              className="tribe-badge"
-              style={{ '--tribe-color': tribe.color, '--tribe-glow': tribe.glow } as React.CSSProperties}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={tribe.icon} alt={tribe.name} className="tribe-badge__icon" />
-              {tribe.name}
-            </span>
-          )}
-          {card.attack !== undefined && card.health !== undefined && (
-            <span className="stat-badge">
-              <span className="stat-atk">{card.attack}</span>
-              <span className="stat-sep">/</span>
-              <span className="stat-hp">{card.health}</span>
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PlainCard({ card, imgErrors, onImgError }: {
-  card: BgCard;
-  imgErrors: Set<number>;
-  onImgError: (id: number) => void;
-}) {
-  return (
-    <div className="plain-card" title={card.name}>
-      {card.duosOnly && <span className="duo-badge">Дуо</span>}
-      {card.image && !imgErrors.has(card.id) ? (
+    <div className="card-img-wrap" title={card.name}>
+      {card.duosOnly && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/assets/duo.webp" alt="Дуо" className="card-duo-badge" />
+      )}
+      {hasImg ? (
         <Image
           src={card.image}
           alt={card.name}
           fill
-          sizes="180px"
+          sizes={size}
           style={{ objectFit: 'cover' }}
           onError={() => onImgError(card.id)}
           unoptimized
@@ -158,20 +89,34 @@ function PlainCard({ card, imgErrors, onImgError }: {
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
-export default function HomePage() {
-  const [cards, setCards]           = useState<BgCard[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [kwMap, setKwMap]           = useState<Record<number, string>>({});
-  const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
-  const [search, setSearch]         = useState('');
-  const [filterTier, setFilterTier] = useState<number | null>(null);
-  const [filterTribe, setFilterTribe] = useState<number | null>(null);
-  const [filterKeyword, setFilterKeyword] = useState<number | null>(null);
-  const [imgErrors, setImgErrors]   = useState<Set<number>>(new Set());
+// ── Tier section divider ──────────────────────────────────────────────────────
+function TierDivider({ tier }: { tier: number }) {
+  return (
+    <div className="tier-divider">
+      <div className="tier-divider__line" />
+      <div className="tier-divider__center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/assets/tier${tier}.png`} alt={`Тир ${tier}`} className="tier-divider__img" />
+        <span className="tier-divider__label">Тир {tier}</span>
+      </div>
+      <div className="tier-divider__line" />
+    </div>
+  );
+}
 
-  // Fetch cards + metadata in parallel
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function HomePage() {
+  const [cards, setCards]         = useState<BgCard[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [kwMap, setKwMap]         = useState<Record<number, string>>({});
+  const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
+  const [search, setSearch]       = useState('');
+  const [filterTier, setFilterTier]     = useState<number | null>(null);
+  const [filterTribe, setFilterTribe]   = useState<number | null>(null);
+  const [filterKeyword, setFilterKeyword] = useState<number | null>(null);
+  const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
+
   useEffect(() => {
     Promise.all([
       fetch('/api/cards').then((r) => r.json()),
@@ -186,18 +131,15 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleImgError(id: number) {
+  const handleImgError = (id: number) =>
     setImgErrors((prev) => new Set(prev).add(id));
-  }
 
-  // Count per category
   const countByCategory = useMemo(() => {
     const m: Record<string, number> = { all: cards.length };
     for (const c of cards) m[c.category] = (m[c.category] ?? 0) + 1;
     return m;
   }, [cards]);
 
-  // Tribes that actually appear in current minion cards
   const activeTribeIds = useMemo(() => {
     const s = new Set<number>();
     cards.filter((c) => c.category === 'minion' && c.minionTypeId)
@@ -205,7 +147,6 @@ export default function HomePage() {
     return [...s].sort((a, b) => a - b);
   }, [cards]);
 
-  // Keywords that appear in current minion cards
   const activeKeywordIds = useMemo(() => {
     const s = new Set<number>();
     cards.filter((c) => c.category === 'minion')
@@ -213,7 +154,6 @@ export default function HomePage() {
     return BG_KEYWORD_IDS.filter((k) => s.has(k));
   }, [cards]);
 
-  // Sort/filter/group logic
   const SORT_BY_TIER: CategoryKey[] = ['minion', 'spell', 'chrono'];
 
   const filtered = useMemo(() => {
@@ -232,7 +172,6 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards, activeCategory, search, filterTier, filterTribe, filterKeyword]);
 
-  // Group by tier (for minion and spell views)
   const byTier = useMemo(() => {
     if (activeCategory !== 'minion' && activeCategory !== 'spell') return null;
     const map = new Map<number, BgCard[]>();
@@ -251,188 +190,195 @@ export default function HomePage() {
     setSearch('');
   }
 
-  const isMinion = activeCategory === 'minion';
-  const isSpell  = activeCategory === 'spell';
+  const isMinion    = activeCategory === 'minion';
+  const isSpell     = activeCategory === 'spell';
   const showFilters = isMinion || isSpell;
+  const hasFilters  = filterTier !== null || filterTribe !== null || filterKeyword !== null;
 
   return (
-    <>
-      {/* ── Header ── */}
-      <header className="header">
-        <h1>⚔️ BG Карты</h1>
-        <div className="search-wrap">
-          <span className="search-icon">🔍</span>
-          <input
-            className="search-input"
-            placeholder="Поиск: например, Боевой клич, Мурлок, Дракон..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+    <div className="page-root">
+
+      {/* ════════════════════════════════
+          HEADER
+      ════════════════════════════════ */}
+      <header className="site-header">
+        <div className="site-header__inner">
+          <div className="site-header__logo">
+            <span className="logo-gem">◆</span>
+            <span className="logo-text">BG <em>Library</em></span>
+          </div>
+          <div className="site-header__search">
+            <svg className="search-ico" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
+              <path d="M13 13L17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+            </svg>
+            <input
+              className="search-input"
+              placeholder="Поиск карты..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button className="search-clear" onClick={() => setSearch('')}>✕</button>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* ── Tabs ── */}
-      <nav className="tabs-bar">
-        {CATEGORIES.map(({ key, label, icon }) => {
-          const count = key === 'all' ? cards.length : (countByCategory[key] ?? 0);
-          if (key !== 'all' && count === 0) return null;
-          return (
-            <button
-              key={key}
-              className={`tab${activeCategory === key ? ' active' : ''}`}
-              onClick={() => { setActiveCategory(key); resetFilters(); }}
-            >
-              {icon} {label}
-              <span className="tab-count">{count}</span>
-            </button>
-          );
-        })}
+      {/* ════════════════════════════════
+          CATEGORY TABS
+      ════════════════════════════════ */}
+      <nav className="cat-nav">
+        <div className="cat-nav__inner">
+          {CATEGORIES.map(({ key, label }) => {
+            const count = key === 'all' ? cards.length : (countByCategory[key] ?? 0);
+            if (key !== 'all' && count === 0) return null;
+            return (
+              <button
+                key={key}
+                className={`cat-tab${activeCategory === key ? ' active' : ''}`}
+                onClick={() => { setActiveCategory(key); resetFilters(); }}
+              >
+                {label}
+                <span className="cat-tab__count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* ── Filter bar (minions + spells) ── */}
+      {/* ════════════════════════════════
+          FILTER PANEL
+      ════════════════════════════════ */}
       {showFilters && !loading && (
-        <div className="filter-bar">
-          {/* Tier shields */}
-          <div className="filter-section">
-            <button
-              className={`tier-btn${filterTier === null ? ' active' : ''}`}
-              onClick={() => setFilterTier(null)}
-              title="Все тиры"
-            >
-              <span className="tier-btn__label">Все</span>
-            </button>
-            {TIER_TIERS.map((t) => (
-              <button
-                key={t}
-                className={`tier-btn${filterTier === t ? ' active' : ''}`}
-                onClick={() => setFilterTier(filterTier === t ? null : t)}
-                title={`Тир ${t}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/assets/tier${t}.png`} alt={`Тир ${t}`} className="tier-btn__img" />
-              </button>
-            ))}
-          </div>
+        <div className="filter-panel">
+          <div className="filter-panel__inner">
 
-          {/* Tribe circles (minions only) */}
-          {isMinion && (
-            <>
-              <div className="filter-divider" />
-              <div className="filter-section">
-                {activeTribeIds.map((id) => {
-                  const info = TRIBE_INFO[id];
-                  if (!info) return null;
-                  const isActive = filterTribe === id;
-                  return (
-                    <button
-                      key={id}
-                      className={`tribe-circle${isActive ? ' active' : ''}`}
-                      style={{ '--tc': info.color, '--tg': info.glow } as React.CSSProperties}
-                      onClick={() => setFilterTribe(isActive ? null : id)}
-                      title={info.name}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={info.icon} alt={info.name} className="tribe-circle__img" />
-                      <span className="tribe-circle__name">{info.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Mechanics dropdown */}
-              {activeKeywordIds.length > 0 && (
-                <>
-                  <div className="filter-divider" />
-                  <select
-                    className="mechanics-select"
-                    value={filterKeyword ?? ''}
-                    onChange={(e) => setFilterKeyword(e.target.value ? Number(e.target.value) : null)}
+            {/* Tier row */}
+            <div className="fp-row">
+              <span className="fp-label">Тир</span>
+              <div className="fp-chips">
+                <button
+                  className={`tier-chip${filterTier === null ? ' active' : ''}`}
+                  onClick={() => setFilterTier(null)}
+                >
+                  Все
+                </button>
+                {TIER_TIERS.map((t) => (
+                  <button
+                    key={t}
+                    className={`tier-chip tier-chip--${t}${filterTier === t ? ' active' : ''}`}
+                    onClick={() => setFilterTier(filterTier === t ? null : t)}
+                    title={`Тир ${t}`}
                   >
-                    <option value="">Механики</option>
-                    {activeKeywordIds.map((id) => (
-                      <option key={id} value={id}>
-                        {kwMap[id] ?? `Механика ${id}`}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              )}
-            </>
-          )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/assets/tier${t}.png`} alt={`${t}`} className="tier-chip__img" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tribe + Mechanics row (minions only) */}
+            {isMinion && (
+              <div className="fp-row">
+                <span className="fp-label">Раса</span>
+                <div className="fp-chips fp-chips--tribes">
+                  {activeTribeIds.map((id) => {
+                    const info = TRIBE_INFO[id];
+                    if (!info) return null;
+                    const active = filterTribe === id;
+                    return (
+                      <button
+                        key={id}
+                        className={`tribe-chip${active ? ' active' : ''}`}
+                        style={{ '--glow': info.glow } as React.CSSProperties}
+                        onClick={() => setFilterTribe(active ? null : id)}
+                        title={info.name}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={info.icon} alt={info.name} className="tribe-chip__img" />
+                        <span className="tribe-chip__name">{info.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {activeKeywordIds.length > 0 && (
+                  <>
+                    <span className="fp-label" style={{ marginLeft: 12 }}>Механика</span>
+                    <select
+                      className="mech-select"
+                      value={filterKeyword ?? ''}
+                      onChange={(e) => setFilterKeyword(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">Все</option>
+                      {activeKeywordIds.map((id) => (
+                        <option key={id} value={id}>{kwMap[id] ?? `#${id}`}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* ── Stats bar ── */}
-      <div className="stats-bar">
-        {loading
-          ? 'Загрузка карт...'
-          : `Показано: ${filtered.length} из ${cards.length} карт`}
-        {(filterTier !== null || filterTribe !== null || filterKeyword !== null) && (
-          <button className="reset-btn" onClick={resetFilters}>✕ Сбросить фильтры</button>
+      {/* ════════════════════════════════
+          STATUS BAR
+      ════════════════════════════════ */}
+      <div className="status-bar">
+        <span className="status-bar__count">
+          {loading ? 'Загрузка...' : `${filtered.length} из ${cards.length} карт`}
+        </span>
+        {hasFilters && (
+          <button className="reset-btn" onClick={resetFilters}>✕ Сбросить</button>
         )}
       </div>
 
-      {/* ── Main content ── */}
-      <main className="main">
+      {/* ════════════════════════════════
+          CONTENT
+      ════════════════════════════════ */}
+      <main className="content">
         {loading && (
-          <div className="loading">
+          <div className="loading-state">
             <div className="spinner" />
-            Загружаем карты Battlegrounds...
+            <p>Загружаем карты Battlegrounds…</p>
           </div>
         )}
-        {error && <div className="error"><strong>Ошибка:</strong> {error}</div>}
+        {error && <div className="error-state">⚠ {error}</div>}
         {!loading && !error && filtered.length === 0 && (
-          <div className="empty">Карты не найдены</div>
+          <div className="empty-state">Ничего не найдено</div>
         )}
 
-        {/* Minions & Spells: grouped by tier */}
-        {!loading && !error && byTier && byTier.length > 0 && (
-          <div>
+        {/* Grouped by tier */}
+        {!loading && !error && byTier && (
+          <>
             {byTier.map(([tier, tierCards]) => (
-              <div key={tier} className="tier-group">
-                {tier > 0 ? <TierLabel tier={tier} /> : (
-                  <div className="tier-section-header">
-                    <span style={{ color: 'rgba(224,224,224,0.4)', fontSize: '0.85rem' }}>Без тира</span>
-                    <div className="tier-section-line" />
-                  </div>
-                )}
-                {isMinion ? (
-                  <div className="minion-grid">
-                    {tierCards.map((card) => (
-                      <MinionCard
-                        key={card.id}
-                        card={card}
-                        imgErrors={imgErrors}
-                        onImgError={handleImgError}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="plain-grid">
-                    {tierCards.map((card) => (
-                      <div key={card.id} className="plain-card-wrap">
-                        <PlainCard card={card} imgErrors={imgErrors} onImgError={handleImgError} />
-                        <div className="plain-card-name">{card.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <section key={tier} className="tier-section">
+                {tier > 0
+                  ? <TierDivider tier={tier} />
+                  : <div className="tier-divider tier-divider--notier"><div className="tier-divider__line"/><span style={{color:'rgba(255,255,255,.3)',fontSize:'0.8rem',padding:'0 14px'}}>Без тира</span><div className="tier-divider__line"/></div>
+                }
+                <div className="cards-grid">
+                  {tierCards.map((card) => (
+                    <CardImage key={card.id} card={card} imgErrors={imgErrors} onImgError={handleImgError} />
+                  ))}
+                </div>
+              </section>
             ))}
-          </div>
+          </>
         )}
 
-        {/* All other categories: plain image grid */}
+        {/* Plain grid (all other tabs) */}
         {!loading && !error && !byTier && filtered.length > 0 && (
-          <div className="plain-grid">
+          <div className="cards-grid">
             {filtered.map((card) => (
-              <div key={card.id} className="plain-card-wrap">
-                <PlainCard card={card} imgErrors={imgErrors} onImgError={handleImgError} />
-              </div>
+              <CardImage key={card.id} card={card} imgErrors={imgErrors} onImgError={handleImgError} />
             ))}
           </div>
         )}
       </main>
-    </>
+    </div>
   );
 }
