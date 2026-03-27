@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server';
 
-/** Базовый URL backend (FastAPI), заканчивается на /api/v1 — без слэша в конце допускается */
+/**
+ * База API: можно указать только origin (`https://host`) или уже с `/api/v1`.
+ * Если `/api/v1` нет в конце — дописываем (как в документации Silk).
+ */
+function normalizeSilkBase(raw: string): string {
+  let b = raw.trim().replace(/\/$/, '');
+  if (!b.endsWith('/api/v1')) {
+    b = `${b}/api/v1`;
+  }
+  return b;
+}
+
 function getSilkBase(): string | null {
   const raw = process.env.SILK_API_BASE_URL?.trim();
   if (!raw) return null;
-  return raw.replace(/\/$/, '');
+  return normalizeSilkBase(raw);
 }
 
 async function parseJsonSafe(res: Response): Promise<unknown | null> {
@@ -25,7 +36,7 @@ export async function GET() {
       ok: false,
       error: 'missing_config',
       message:
-        'Задайте в Vercel / .env.local переменную SILK_API_BASE_URL — URL вашего backend с префиксом /api/v1 (например https://api.example.com/api/v1). Сайт api-data-silk.vercel.app сейчас отдаёт только HTML-документацию, не JSON API.',
+        'Задайте в Vercel → Environment Variables переменную SILK_API_BASE_URL. Достаточно корня, например https://api.example.com — путь /api/v1 подставится сам. Важно: на https://api-data-silk.vercel.app развёрнута только HTML-документация; JSON API должен быть на другом URL (ваш FastAPI / Railway / и т.д.).',
     });
   }
 
@@ -42,7 +53,8 @@ export async function GET() {
         ok: false,
         error: 'not_json',
         message:
-          'Ответ не JSON (часто это страница документации). Проверьте SILK_API_BASE_URL — должен указывать на рабочий REST backend, а не на статический сайт.',
+          'Ответ не JSON (часто HTML-документация). Домен api-data-silk.vercel.app сейчас отдаёт только сайт с докой, не API. Укажите SILK_API_BASE_URL на хост, где реально запущен FastAPI из репозитория Silk (Railway, VPS и т.д.). Запрос идёт на: ' +
+          url,
         httpStatus: res.status,
       });
     }
