@@ -8,7 +8,6 @@ import {
   buildHeroExtrasLookup,
   buildHeroRuLookup,
   groupRowsByTier,
-  heroPortraitUrl,
   resolveHeroRuName,
   tierFromPlacement,
   translateFirestonePeriod,
@@ -162,18 +161,33 @@ function MetaHeroTile({
   row,
   heroRuLookup,
   heroExtrasLookup,
+  heroCardBySlug,
+  heroCardById,
+  imgErrors,
+  onImgError,
   showMetaStats,
 }: {
   row: FirestoneHeroRow;
   heroRuLookup: Map<string, string>;
   heroExtrasLookup: Map<string, { armor?: number; duosOnly: boolean }>;
+  heroCardBySlug: Map<string, BgCard>;
+  heroCardById: Map<number, BgCard>;
+  imgErrors: Set<number>;
+  onImgError: (id: number) => void;
   showMetaStats: boolean;
 }) {
   const slug = row.hero_card_id;
   const ruName = resolveHeroRuName(row, heroRuLookup);
+  const card = (() => {
+    if (!slug) return undefined;
+    const bySlug = heroCardBySlug.get(slug);
+    if (bySlug) return bySlug;
+    const t = slug.trim();
+    if (/^\d+$/.test(t)) return heroCardById.get(Number(t));
+    return undefined;
+  })();
   const extras = slug ? heroExtrasLookup.get(slug) : undefined;
-  const portrait = heroPortraitUrl(slug);
-  const armor = extras?.armor;
+  const armor = card?.armor ?? extras?.armor;
 
   return (
     <article
@@ -181,21 +195,14 @@ function MetaHeroTile({
       title={ruName}
     >
       <div className="tl-hero-tile__cell">
-        {extras?.duosOnly && (
-          <span className="tl-hero-tile__duo">Дуо</span>
-        )}
-        <div className="tl-hero-frame">
-          {portrait ? (
-            <Image
-              src={portrait}
-              alt={ruName}
-              fill
-              sizes="120px"
-              className="tl-hero-frame__img"
-              unoptimized
-            />
+        <div className="tl-hero-library-card">
+          {card ? (
+            <CardImage card={card} imgErrors={imgErrors} onImgError={onImgError} size="148px" />
           ) : (
-            <div className="tl-hero-frame__fallback" aria-hidden>?</div>
+            <div className="card-img-wrap" title={ruName}>
+              {extras?.duosOnly && <span className="card-duo-badge">Дуо</span>}
+              <div className="card-placeholder">🃏</div>
+            </div>
           )}
         </div>
         <div className="tl-hero-armor" title="Броня героя">
@@ -350,6 +357,20 @@ export default function BgLibraryApp() {
 
   const heroRuLookup = useMemo(() => buildHeroRuLookup(cards), [cards]);
   const heroExtrasLookup = useMemo(() => buildHeroExtrasLookup(cards), [cards]);
+  const heroCardBySlug = useMemo(() => {
+    const m = new Map<string, BgCard>();
+    for (const c of cards) {
+      if (c.category === 'hero' && c.slug) m.set(c.slug, c);
+    }
+    return m;
+  }, [cards]);
+  const heroCardById = useMemo(() => {
+    const m = new Map<number, BgCard>();
+    for (const c of cards) {
+      if (c.category === 'hero') m.set(c.id, c);
+    }
+    return m;
+  }, [cards]);
 
   const sortedFirestoneHeroes = useMemo((): FirestoneHeroRow[] => {
     if (!firestoneHeroes?.heroes?.length) return [];
@@ -720,6 +741,10 @@ export default function BgLibraryApp() {
                               row={row}
                               heroRuLookup={heroRuLookup}
                               heroExtrasLookup={heroExtrasLookup}
+                              heroCardBySlug={heroCardBySlug}
+                              heroCardById={heroCardById}
+                              imgErrors={imgErrors}
+                              onImgError={handleImgError}
                               showMetaStats={showMetaStats}
                             />
                           ))}

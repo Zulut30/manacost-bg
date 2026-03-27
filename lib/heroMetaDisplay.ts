@@ -71,8 +71,3 @@ export function groupRowsByTier<T extends { avg_placement?: number | null }>(
   }
   return map;
 }
-
-export function heroPortraitUrl(heroCardId: string | undefined): string | null {
-  if (!heroCardId?.trim()) return null;
-  return `https://art.hearthstonejson.com/v1/render/latest/ruRU/256x/${heroCardId}.png`;
-}

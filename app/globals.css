@@ -722,45 +722,12 @@ body {
   position: relative;
   width: 100%;
 }
-.tl-hero-tile__duo {
-  background: rgba(100, 140, 255, 0.92);
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 2px 5px;
-  pointer-events: none;
-  position: absolute;
-  right: 0;
-  top: 0;
-  z-index: 4;
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.65));
-}
-
-.tl-hero-frame {
-  aspect-ratio: 256 / 340;
-  border-radius: 50% 50% 10px 10px / 38% 38% 10px 10px;
-  overflow: hidden;
+/* Как в библиотеке: CardImage → .card-img-wrap */
+.tl-hero-library-card {
   position: relative;
   width: 100%;
-  box-shadow:
-    0 0 0 3px rgba(156, 39, 176, 0.88),
-    0 0 18px rgba(156, 39, 176, 0.38),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
-.tl-hero-frame__img {
-  object-fit: cover;
-  object-position: top center;
-}
-.tl-hero-frame__fallback {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.22);
-  display: flex;
-  font-size: 1.6rem;
-  height: 100%;
-  justify-content: center;
+.tl-hero-library-card .card-img-wrap {
   width: 100%;
 }
 
@@ -800,11 +767,11 @@ body {
 .tl-hero-stats {
   background: linear-gradient(180deg, rgba(8, 12, 22, 0.92) 0%, rgba(6, 10, 18, 0.97) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0 0 8px 8px;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   gap: 3px;
-  margin-top: -2px;
+  margin-top: 8px;
   padding: 6px 6px 7px;
   position: relative;
   width: 100%;
@@ -839,13 +806,6 @@ body {
   margin: 0;
   text-align: center;
   width: 100%;
-}
-
-.tl-hero-tile:hover .tl-hero-frame {
-  box-shadow:
-    0 0 0 3px rgba(186, 104, 200, 1),
-    0 0 26px rgba(156, 39, 176, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 @media (max-width: 480px) {
