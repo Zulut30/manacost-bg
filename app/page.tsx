@@ -59,33 +59,26 @@ const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: 'other',   label: 'Прочее'       },
 ];
 
-type SilkBgPayload = {
-  comps?: { comps?: unknown[]; total?: number; _error?: number };
-  firestone?: {
-    cards?: Array<{
-      card_name?: string;
-      tavern_tier?: number | null;
-      avg_placement?: number | null;
-      total_played?: number;
-    }>;
-    total?: number;
-    _error?: number;
-  };
-  fetchedAt?: string;
-  error?: string;
+type AppSection = 'library' | 'meta';
+
+type FirestoneHeroRow = {
+  hero_card_id?: string;
+  hero_name?: string;
+  avg_placement?: number | null;
+  pick_rate?: number | null;
+  games_played?: number | null;
+  total_offered?: number | null;
+  time_period?: string;
 };
 
-function extractCompsList(data: SilkBgPayload['comps']): Array<{
-  name?: string;
-  tier?: string;
-  difficulty?: string;
-  summary?: string;
-}> {
-  if (!data || typeof data !== 'object') return [];
-  const o = data as { comps?: unknown[] };
-  if (Array.isArray(o.comps)) return o.comps as { name?: string; tier?: string; difficulty?: string; summary?: string }[];
-  return [];
-}
+type FirestoneHeroesPayload = {
+  ok?: boolean;
+  heroes?: FirestoneHeroRow[];
+  total?: number;
+  fetchedAt?: string;
+  error?: string;
+  message?: string;
+};
 
 const TRIBE_INFO: Record<number, { name: string; icon: string; glow: string }> = {
   11: { name: 'Нежить',      icon: '/assets/undead.webp',     glow: '#78909C' },
@@ -196,7 +189,9 @@ export default function HomePage() {
   const [filterKeyword, setFilterKeyword] = useState<number | null>(null);
   const [chronoKind, setChronoKind] = useState<ChronoKind>('minor');
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
-  const [silkBg, setSilkBg] = useState<SilkBgPayload | null>(null);
+  const [appSection, setAppSection] = useState<AppSection>('library');
+  const [firestoneHeroes, setFirestoneHeroes] = useState<FirestoneHeroesPayload | null>(null);
+  const [metaLoading, setMetaLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -213,11 +208,24 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/silk-bg')
+    if (appSection !== 'meta') return;
+    let cancelled = false;
+    setMetaLoading(true);
+    fetch('/api/silk-firestone-heroes')
       .then((r) => r.json())
-      .then((d) => setSilkBg(d))
-      .catch(() => setSilkBg({ error: 'silk' }));
-  }, []);
+      .then((d) => {
+        if (!cancelled) setFirestoneHeroes(d);
+      })
+      .catch(() => {
+        if (!cancelled) setFirestoneHeroes({ ok: false, error: 'fetch', message: 'Сеть или сервер недоступны.' });
+      })
+      .finally(() => {
+        if (!cancelled) setMetaLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appSection]);
 
   const handleImgError = (id: number) =>
     setImgErrors((prev) => new Set(prev).add(id));
@@ -325,35 +333,49 @@ export default function HomePage() {
             <span className="logo-gem">◆</span>
             <span className="logo-text">BG <em>Library</em></span>
           </div>
-          <div className="site-header__search">
-            <svg className="search-ico" viewBox="0 0 20 20" fill="none">
-              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
-              <path d="M13 13L17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-            </svg>
-            <input
-              className="search-input"
-              placeholder="Поиск карты..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button className="search-clear" onClick={() => setSearch('')}>✕</button>
-            )}
-          </div>
+          {appSection === 'library' && (
+            <div className="site-header__search">
+              <svg className="search-ico" viewBox="0 0 20 20" fill="none">
+                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
+                <path d="M13 13L17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+              <input
+                className="search-input"
+                placeholder="Поиск карты..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="search-clear" onClick={() => setSearch('')}>✕</button>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
       {/* ════════════════════════════════
-          LIBRARY (root) + подразделы
+          Главное меню: Библиотека | Мета
       ════════════════════════════════ */}
-      <nav className="cat-nav cat-nav--root" aria-label="Библиотека">
-        <div className="cat-nav__inner cat-nav__inner--root">
-          <div className="cat-tab cat-tab--root active">
+      <nav className="cat-nav cat-nav--root" aria-label="Разделы приложения">
+        <div className="cat-nav__inner cat-nav__inner--root cat-nav__inner--split">
+          <button
+            type="button"
+            className={`cat-tab cat-tab--split${appSection === 'library' ? ' active' : ''}`}
+            onClick={() => setAppSection('library')}
+          >
             Библиотека
             <span className="cat-tab__count">{cards.length}</span>
-          </div>
+          </button>
+          <button
+            type="button"
+            className={`cat-tab cat-tab--split${appSection === 'meta' ? ' active' : ''}`}
+            onClick={() => setAppSection('meta')}
+          >
+            Мета и тир-листы
+          </button>
         </div>
       </nav>
+      {appSection === 'library' && (
       <nav className="lib-subnav" aria-label="Разделы библиотеки">
         <div className="lib-subnav__inner">
           {CATEGORIES.map(({ key, label }) => {
@@ -376,11 +398,12 @@ export default function HomePage() {
           })}
         </div>
       </nav>
+      )}
 
       {/* ════════════════════════════════
           FILTER PANEL
       ════════════════════════════════ */}
-      {showFilters && !loading && (
+      {appSection === 'library' && showFilters && !loading && (
         <div className="filter-panel">
           <div className="filter-panel__inner">
 
@@ -487,6 +510,7 @@ export default function HomePage() {
       {/* ════════════════════════════════
           STATUS BAR
       ════════════════════════════════ */}
+      {appSection === 'library' && (
       <div className="status-bar">
         <span className="status-bar__count">
           {loading ? 'Загрузка...' : `${filtered.length} из ${cards.length} карт`}
@@ -495,103 +519,92 @@ export default function HomePage() {
           <button className="reset-btn" onClick={resetFilters}>✕ Сбросить</button>
         )}
       </div>
-
-      {/* ════════════════════════════════
-          META (Silk API — HSReplay / Firestone)
-      ════════════════════════════════ */}
-      <section className="meta-dock" aria-label="Мета Battlegrounds">
-        <div className="meta-dock__inner">
-          <h2 className="meta-dock__title">Мета и тир-листы</h2>
-          <p className="meta-dock__source">
-            Данные:{' '}
-            <a href="https://api-data-silk.vercel.app/#overview" target="_blank" rel="noreferrer">
-              api-data-silk.vercel.app
-            </a>
-            {silkBg?.fetchedAt && (
-              <span className="meta-dock__time"> · обновлено {new Date(silkBg.fetchedAt).toLocaleString('ru-RU')}</span>
-            )}
-          </p>
-          {silkBg?.error && <p className="meta-dock__hint">Не удалось загрузить мета-данные.</p>}
-          {!silkBg && <p className="meta-dock__hint">Загрузка статистики…</p>}
-          {silkBg && !silkBg.error && (
-            <div className="meta-dock__grid">
-              <div className="meta-block">
-                <h3 className="meta-block__title">Стратегии BG (HSReplay)</h3>
-                {silkBg.comps?._error != null ? (
-                  <p className="meta-dock__hint">Код {silkBg.comps._error}</p>
-                ) : (
-                  <div className="meta-table-wrap">
-                    <table className="meta-table">
-                      <thead>
-                        <tr>
-                          <th>Стратегия</th>
-                          <th>Тир</th>
-                          <th>Сложность</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {extractCompsList(silkBg.comps).slice(0, 30).map((row, i) => (
-                          <tr key={i}>
-                            <td>{row.name}</td>
-                            <td>{row.tier}</td>
-                            <td>{row.difficulty}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div className="meta-block">
-                <h3 className="meta-block__title">Карты BG (Firestone)</h3>
-                {silkBg.firestone?._error != null ? (
-                  <p className="meta-dock__hint">Код {silkBg.firestone._error}</p>
-                ) : (
-                  <div className="meta-table-wrap">
-                    <table className="meta-table">
-                      <thead>
-                        <tr>
-                          <th>Карта</th>
-                          <th>Тир таверны</th>
-                          <th>Ср. место</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(silkBg.firestone?.cards ?? [])
-                          .filter(
-                            (c): c is NonNullable<typeof c> & { card_name: string } =>
-                              Boolean(c?.card_name),
-                          )
-                          .sort(
-                            (a, b) =>
-                              (a.avg_placement ?? 99) - (b.avg_placement ?? 99),
-                          )
-                          .slice(0, 25)
-                          .map((row, i) => (
-                            <tr key={i}>
-                              <td>{row.card_name}</td>
-                              <td>{row.tavern_tier ?? '—'}</td>
-                              <td>
-                                {row.avg_placement != null
-                                  ? row.avg_placement.toFixed(2)
-                                  : '—'}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+      )}
 
       {/* ════════════════════════════════
           CONTENT
       ════════════════════════════════ */}
       <main className="content">
+        {appSection === 'meta' && (
+          <section className="meta-page" aria-label="Тир-лист героев Firestone">
+            <h1 className="meta-page__title">Тир-лист героев (Firestone)</h1>
+            <p className="meta-page__lead">
+              Данные через ваш backend API (см.{' '}
+              <a href="https://api-data-silk.vercel.app/#overview" target="_blank" rel="noreferrer">
+                документацию Silk
+              </a>
+              ). В Vercel задайте{' '}
+              <code className="meta-page__code">SILK_API_BASE_URL</code> — URL с суффиксом{' '}
+              <code className="meta-page__code">/api/v1</code>, где развёрнут REST (не статическая документация).
+            </p>
+            {metaLoading && (
+              <div className="loading-state loading-state--compact">
+                <div className="spinner" />
+                <p>Загружаем героев…</p>
+              </div>
+            )}
+            {!metaLoading && firestoneHeroes && firestoneHeroes.ok !== true && (
+              <div className="error-state meta-page__error">
+                <strong>Не удалось загрузить данные.</strong>
+                <p>{firestoneHeroes.message ?? firestoneHeroes.error ?? 'Неизвестная ошибка'}</p>
+              </div>
+            )}
+            {!metaLoading && firestoneHeroes?.ok === true && (
+              <>
+                <p className="meta-page__updated">
+                  {firestoneHeroes.fetchedAt
+                    ? `Обновлено: ${new Date(firestoneHeroes.fetchedAt).toLocaleString('ru-RU')}`
+                    : null}
+                  {firestoneHeroes.total != null ? ` · Всего: ${firestoneHeroes.total}` : ''}
+                </p>
+                <div className="meta-table-wrap meta-table-wrap--full">
+                  <table className="meta-table">
+                    <thead>
+                      <tr>
+                        <th>Герой</th>
+                        <th>Ср. место</th>
+                        <th>Pick %</th>
+                        <th>Игр</th>
+                        <th>Период</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {([...(firestoneHeroes.heroes ?? [])] as FirestoneHeroRow[])
+                        .sort(
+                          (a, b) =>
+                            (a.avg_placement ?? 99) - (b.avg_placement ?? 99),
+                        )
+                        .map((row, i) => (
+                          <tr key={row.hero_card_id ?? i}>
+                            <td>{row.hero_name ?? '—'}</td>
+                            <td>
+                              {row.avg_placement != null
+                                ? row.avg_placement.toFixed(2)
+                                : '—'}
+                            </td>
+                            <td>
+                              {typeof row.pick_rate === 'number'
+                                ? `${row.pick_rate.toFixed(1)}%`
+                                : '—'}
+                            </td>
+                            <td>
+                              {row.games_played != null
+                                ? row.games_played.toLocaleString('ru-RU')
+                                : '—'}
+                            </td>
+                            <td>{row.time_period ?? '—'}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
+        {appSection === 'library' && (
+          <>
         {loading && (
           <div className="loading-state">
             <div className="spinner" />
@@ -645,6 +658,8 @@ export default function HomePage() {
               <CardImage key={card.id} card={card} imgErrors={imgErrors} onImgError={handleImgError} />
             ))}
           </div>
+        )}
+          </>
         )}
       </main>
     </div>
