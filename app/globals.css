@@ -322,6 +322,36 @@ body {
 .mech-select:focus { border-color: var(--gold); }
 .mech-select option { background: #111827; }
 
+/* ── Chrono: Малые / Ключевые ── */
+.chrono-segment {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(200,148,60,.2);
+  border-radius: 10px;
+  display: inline-flex;
+  gap: 0;
+  overflow: hidden;
+  padding: 2px;
+}
+.chrono-segment__btn {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 18px;
+  transition: background .15s, color .15s;
+}
+.chrono-segment__btn:hover {
+  color: var(--text);
+}
+.chrono-segment__btn.active {
+  background: rgba(200,148,60,.18);
+  box-shadow: 0 0 12px rgba(200,148,60,.12);
+  color: var(--gold-light);
+}
+
 /* ════════════════════════════════════════════
    STATUS BAR
 ════════════════════════════════════════════ */
@@ -395,6 +425,20 @@ body {
   font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
+}
+
+.tier-divider--chrono .tier-divider__line {
+  background: linear-gradient(90deg, transparent, rgba(140,120,200,.35), transparent);
+}
+.tier-divider__img--chrono {
+  filter: drop-shadow(0 2px 10px rgba(140,120,200,.35));
+}
+.tier-divider__img--chrono-muted {
+  opacity: .45;
+}
+.tier-divider__label--chrono {
+  letter-spacing: .06em;
+  text-transform: none;
 }
 
 /* ── Cards grid ── */

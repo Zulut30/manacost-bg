@@ -18,9 +18,31 @@ interface BgCard {
   category: string;
   image: string;
   tier?: number;
+  manaCost?: number | null;
   hero: boolean;
   duosOnly: boolean;
   solosOnly: boolean;
+}
+
+/** Малые хрономальные — cardTypeId 40, ключевые — 999 (поменять при необходимости) */
+const CHRONO_TYPE_MINOR = 40;
+const CHRONO_TYPE_MAJOR = 999;
+
+type ChronoKind = 'minor' | 'major';
+
+function chronoSortKey(c: BgCard): number {
+  const m = c.manaCost;
+  if (m != null && m > 0) return m;
+  const t = c.tier;
+  if (t != null && t > 0) return t;
+  return 999;
+}
+
+/** Ключ группы: -1 = нет ни стоимости, ни тира (в конец) */
+function chronoGroupKey(c: BgCard): number {
+  if (c.manaCost != null && c.manaCost > 0) return c.manaCost;
+  if (c.tier != null && c.tier > 0) return c.tier;
+  return -1;
 }
 
 type CategoryKey =
@@ -101,6 +123,41 @@ function TierDivider({ tier }: { tier: number }) {
   );
 }
 
+function ChronumDivider({ cost }: { cost: number }) {
+  if (cost === -1) {
+    return (
+      <div className="tier-divider tier-divider--chrono">
+        <div className="tier-divider__line" />
+        <div className="tier-divider__center">
+          <span className="tier-divider__label tier-divider__label--chrono">Без стоимости</span>
+        </div>
+        <div className="tier-divider__line" />
+      </div>
+    );
+  }
+  const showImg = cost >= 1 && cost <= 3;
+  return (
+    <div className="tier-divider tier-divider--chrono">
+      <div className="tier-divider__line" />
+      <div className="tier-divider__center">
+        {showImg ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/assets/chronum${cost}.webp`} alt={`Хронум ${cost}`} className="tier-divider__img tier-divider__img--chrono" />
+          </>
+        ) : (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/chronum3.webp" alt="" className="tier-divider__img tier-divider__img--chrono tier-divider__img--chrono-muted" aria-hidden />
+          </>
+        )}
+        <span className="tier-divider__label tier-divider__label--chrono">Хронум {cost}</span>
+      </div>
+      <div className="tier-divider__line" />
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const [cards, setCards]         = useState<BgCard[]>([]);
@@ -112,6 +169,7 @@ export default function HomePage() {
   const [filterTier, setFilterTier]     = useState<number | null>(null);
   const [filterTribe, setFilterTribe]   = useState<number | null>(null);
   const [filterKeyword, setFilterKeyword] = useState<number | null>(null);
+  const [chronoKind, setChronoKind] = useState<ChronoKind>('minor');
   const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -151,23 +209,32 @@ export default function HomePage() {
     return BG_KEYWORD_IDS.filter((k) => s.has(k));
   }, [cards]);
 
-  const SORT_BY_TIER: CategoryKey[] = ['minion', 'spell', 'chrono'];
+  const SORT_BY_TIER: CategoryKey[] = ['minion', 'spell'];
 
   const filtered = useMemo(() => {
+    const wantChronoType = chronoKind === 'minor' ? CHRONO_TYPE_MINOR : CHRONO_TYPE_MAJOR;
     const result = cards.filter((c) => {
       if (activeCategory !== 'all' && c.category !== activeCategory) return false;
+      if (activeCategory === 'chrono' && c.cardTypeId !== wantChronoType) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterTier !== null && c.tier !== filterTier) return false;
       if (filterTribe !== null && c.minionTypeId !== filterTribe) return false;
       if (filterKeyword !== null && !c.keywordIds.includes(filterKeyword)) return false;
       return true;
     });
-    if (SORT_BY_TIER.includes(activeCategory)) {
+    if (activeCategory === 'chrono') {
+      result.sort((a, b) => {
+        const ka = chronoSortKey(a);
+        const kb = chronoSortKey(b);
+        if (ka !== kb) return ka - kb;
+        return a.name.localeCompare(b.name, 'ru');
+      });
+    } else if (SORT_BY_TIER.includes(activeCategory)) {
       result.sort((a, b) => (a.tier ?? 999) - (b.tier ?? 999));
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, activeCategory, search, filterTier, filterTribe, filterKeyword]);
+  }, [cards, activeCategory, search, filterTier, filterTribe, filterKeyword, chronoKind]);
 
   const byTier = useMemo(() => {
     if (activeCategory !== 'minion' && activeCategory !== 'spell') return null;
@@ -180,17 +247,38 @@ export default function HomePage() {
     return [...map.entries()].sort(([a], [b]) => a - b);
   }, [filtered, activeCategory]);
 
+  const byChronum = useMemo(() => {
+    if (activeCategory !== 'chrono') return null;
+    const map = new Map<number, BgCard[]>();
+    for (const c of filtered) {
+      const k = chronoGroupKey(c);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(c);
+    }
+    return [...map.entries()].sort(([a], [b]) => {
+      const ao = a === -1 ? 99999 : a;
+      const bo = b === -1 ? 99999 : b;
+      return ao - bo;
+    });
+  }, [filtered, activeCategory]);
+
   function resetFilters() {
     setFilterTier(null);
     setFilterTribe(null);
     setFilterKeyword(null);
     setSearch('');
+    setChronoKind('minor');
   }
 
   const isMinion    = activeCategory === 'minion';
   const isSpell     = activeCategory === 'spell';
-  const showFilters = isMinion || isSpell;
-  const hasFilters  = filterTier !== null || filterTribe !== null || filterKeyword !== null;
+  const isChrono    = activeCategory === 'chrono';
+  const showFilters = isMinion || isSpell || isChrono;
+  const hasFilters  =
+    filterTier !== null
+    || filterTribe !== null
+    || filterKeyword !== null
+    || (isChrono && chronoKind !== 'minor');
 
   return (
     <div className="page-root">
@@ -234,7 +322,10 @@ export default function HomePage() {
               <button
                 key={key}
                 className={`cat-tab${activeCategory === key ? ' active' : ''}`}
-                onClick={() => { setActiveCategory(key); resetFilters(); }}
+                onClick={() => {
+                  setActiveCategory(key);
+                  resetFilters();
+                }}
               >
                 {label}
                 <span className="cat-tab__count">{count}</span>
@@ -251,71 +342,101 @@ export default function HomePage() {
         <div className="filter-panel">
           <div className="filter-panel__inner">
 
-            {/* Tier row */}
-            <div className="fp-row">
-              <span className="fp-label">Уровень Таверны</span>
-              <div className="fp-chips">
-                <button
-                  className={`tier-chip${filterTier === null ? ' active' : ''}`}
-                  onClick={() => setFilterTier(null)}
-                >
-                  Все
-                </button>
-                {TIER_TIERS.map((t) => (
-                  <button
-                    key={t}
-                    className={`tier-chip tier-chip--${t}${filterTier === t ? ' active' : ''}`}
-                    onClick={() => setFilterTier(filterTier === t ? null : t)}
-                    title={`Уровень Таверны ${t}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/assets/tier${t}.png`} alt={`${t}`} className="tier-chip__img" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tribe + Mechanics row (minions only) */}
-            {isMinion && (
+            {isChrono && (
               <div className="fp-row">
-                <span className="fp-label">Раса</span>
-                <div className="fp-chips fp-chips--tribes">
-                  {activeTribeIds.map((id) => {
-                    const info = TRIBE_INFO[id];
-                    if (!info) return null;
-                    const active = filterTribe === id;
-                    return (
+                <span className="fp-label">Тип</span>
+                <div className="chrono-segment" role="tablist" aria-label="Тип хрономальных карт">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={chronoKind === 'minor'}
+                    className={`chrono-segment__btn${chronoKind === 'minor' ? ' active' : ''}`}
+                    onClick={() => setChronoKind('minor')}
+                  >
+                    Малые
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={chronoKind === 'major'}
+                    className={`chrono-segment__btn${chronoKind === 'major' ? ' active' : ''}`}
+                    onClick={() => setChronoKind('major')}
+                  >
+                    Ключевые
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {(isMinion || isSpell) && (
+              <>
+                {/* Tier row */}
+                <div className="fp-row">
+                  <span className="fp-label">Уровень Таверны</span>
+                  <div className="fp-chips">
+                    <button
+                      className={`tier-chip${filterTier === null ? ' active' : ''}`}
+                      onClick={() => setFilterTier(null)}
+                    >
+                      Все
+                    </button>
+                    {TIER_TIERS.map((t) => (
                       <button
-                        key={id}
-                        className={`tribe-chip${active ? ' active' : ''}`}
-                        style={{ '--glow': info.glow } as React.CSSProperties}
-                        onClick={() => setFilterTribe(active ? null : id)}
-                        title={info.name}
+                        key={t}
+                        className={`tier-chip tier-chip--${t}${filterTier === t ? ' active' : ''}`}
+                        onClick={() => setFilterTier(filterTier === t ? null : t)}
+                        title={`Уровень Таверны ${t}`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={info.icon} alt={info.name} className="tribe-chip__img" />
-                        <span className="tribe-chip__name">{info.name}</span>
+                        <img src={`/assets/tier${t}.png`} alt={`${t}`} className="tier-chip__img" />
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
 
-                {activeKeywordIds.length > 0 && (
-                  <>
-                    <span className="fp-label" style={{ marginLeft: 12 }}>Механика</span>
-                    <select
-                      className="mech-select"
-                      value={filterKeyword ?? ''}
-                      onChange={(e) => setFilterKeyword(e.target.value ? Number(e.target.value) : null)}
-                    >
-                      <option value="">Все</option>
-                      {activeKeywordIds.map((id) => (
-                        <option key={id} value={id}>{kwMap[id] ?? `#${id}`}</option>
-                      ))}
-                    </select>
-                  </>
+                {/* Tribe + Mechanics row (minions only) */}
+                {isMinion && (
+                  <div className="fp-row">
+                    <span className="fp-label">Раса</span>
+                    <div className="fp-chips fp-chips--tribes">
+                      {activeTribeIds.map((id) => {
+                        const info = TRIBE_INFO[id];
+                        if (!info) return null;
+                        const active = filterTribe === id;
+                        return (
+                          <button
+                            key={id}
+                            className={`tribe-chip${active ? ' active' : ''}`}
+                            style={{ '--glow': info.glow } as React.CSSProperties}
+                            onClick={() => setFilterTribe(active ? null : id)}
+                            title={info.name}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={info.icon} alt={info.name} className="tribe-chip__img" />
+                            <span className="tribe-chip__name">{info.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {activeKeywordIds.length > 0 && (
+                      <>
+                        <span className="fp-label" style={{ marginLeft: 12 }}>Механика</span>
+                        <select
+                          className="mech-select"
+                          value={filterKeyword ?? ''}
+                          onChange={(e) => setFilterKeyword(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">Все</option>
+                          {activeKeywordIds.map((id) => (
+                            <option key={id} value={id}>{kwMap[id] ?? `#${id}`}</option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -348,8 +469,24 @@ export default function HomePage() {
           <div className="empty-state">Ничего не найдено</div>
         )}
 
+        {/* Grouped by chronum (хрономальные) */}
+        {!loading && !error && byChronum && (
+          <>
+            {byChronum.map(([cost, chronumCards]) => (
+              <section key={cost} className="tier-section">
+                <ChronumDivider cost={cost} />
+                <div className="cards-grid">
+                  {chronumCards.map((card) => (
+                    <CardImage key={card.id} card={card} imgErrors={imgErrors} onImgError={handleImgError} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
+        )}
+
         {/* Grouped by tier */}
-        {!loading && !error && byTier && (
+        {!loading && !error && !byChronum && byTier && (
           <>
             {byTier.map(([tier, tierCards]) => (
               <section key={tier} className="tier-section">
@@ -368,7 +505,7 @@ export default function HomePage() {
         )}
 
         {/* Plain grid (all other tabs) */}
-        {!loading && !error && !byTier && filtered.length > 0 && (
+        {!loading && !error && !byChronum && !byTier && filtered.length > 0 && (
           <div className="cards-grid">
             {filtered.map((card) => (
               <CardImage key={card.id} card={card} imgErrors={imgErrors} onImgError={handleImgError} />

@@ -119,6 +119,7 @@ async function fetchAllCards(token: string) {
     image: pickImage(c),
     imageGold: c.battlegrounds?.imageGold || c.imageGold || '',
     tier: c.battlegrounds?.tier,
+    manaCost: c.manaCost ?? null,
     hero: c.battlegrounds?.hero ?? false,
     duosOnly: c.battlegrounds?.duosOnly ?? false,
     solosOnly: c.battlegrounds?.solosOnly ?? false,
